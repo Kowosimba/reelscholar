@@ -220,7 +220,7 @@ class _ConceptMapScreenState extends State<ConceptMapScreen> {
                       icon: Icons.add_rounded,
                       onTap: () {
                         final m = _transformCtrl.value.clone();
-                        m.scale(1.2);
+                        m.scaleByDouble(1.2, 1.2, 1.0, 1.0);
                         _transformCtrl.value = m;
                       },
                     ),
@@ -229,7 +229,7 @@ class _ConceptMapScreenState extends State<ConceptMapScreen> {
                       icon: Icons.remove_rounded,
                       onTap: () {
                         final m = _transformCtrl.value.clone();
-                        m.scale(0.8);
+                        m.scaleByDouble(0.8, 0.8, 1.0, 1.0);
                         _transformCtrl.value = m;
                       },
                     ),

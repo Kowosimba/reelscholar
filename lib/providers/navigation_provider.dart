@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Bottom nav indices
-/// 0 = Reels  1 = Chats  2 = Upload(FAB)  3 = Learn  4 = Profile
+/// 0 = Reels  1 = Chats  2 = Study Groups  3 = Learn  4 = Profile
 class NavigationProvider extends ChangeNotifier {
   int _currentIndex = 0; // Default: Reels
 
@@ -19,12 +19,12 @@ class NavigationProvider extends ChangeNotifier {
 
   bool get isReels => _currentIndex == 0;
   bool get isChats => _currentIndex == 1;
+  bool get isStudyGroups => _currentIndex == 2;
   bool get isLearn => _currentIndex == 3;
   bool get isProfile => _currentIndex == 4;
 
   // ── Navigation ───────────────────────────────────────────────────────────────
   void setTab(int index) {
-    if (index == 2) return; // FAB — handled externally
     if (_currentIndex == index) return;
     _currentIndex = index;
     notifyListeners();
@@ -32,6 +32,7 @@ class NavigationProvider extends ChangeNotifier {
 
   void goToReels() => setTab(0);
   void goToChats() => setTab(1);
+  void goToStudyGroups() => setTab(2);
   void goToLearn() => setTab(3);
   void goToProfile() => setTab(4);
 

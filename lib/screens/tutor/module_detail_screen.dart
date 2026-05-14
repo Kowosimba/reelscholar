@@ -8,6 +8,8 @@ import 'flashcards_screen.dart';
 import 'concept_map_screen.dart';
 import 'voice_lesson_screen.dart';
 import 'session_history_screen.dart';
+import 'package:reelscholar/screens/quiz/quiz_suggestion_card.dart';
+import 'package:reelscholar/screens/quiz/quiz_attempts_screen.dart';
 
 class ModuleDetailScreen extends StatefulWidget {
   final TutorModule module;
@@ -294,6 +296,61 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
                 const SizedBox(height: 24),
 
+                // ── Module quiz (API: /tutor/modules/{module}/quiz*, /quizzes/*) ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Quiz',
+                        style: TextStyle(
+                          fontFamily: 'Sora',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: TColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      QuizSuggestionCard(
+                        moduleId: module.moduleId,
+                        moduleName: module.name,
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => QuizAttemptsScreen(
+                                  moduleId: module.moduleId,
+                                  moduleName: module.name,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.history_rounded,
+                            size: 18,
+                            color: _accent,
+                          ),
+                          label: Text(
+                            'Past attempts',
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontWeight: FontWeight.w700,
+                              color: _accent,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
                 // ── Learning tools grid ───────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -428,6 +485,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     );
     if (confirmed == true && mounted) {
       await context.read<TutorProvider>().resetSession();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Session reset. Ready to start fresh.'),

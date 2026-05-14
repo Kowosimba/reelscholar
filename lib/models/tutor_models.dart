@@ -451,3 +451,35 @@ class SessionHistoryEntry {
         isActive: j['is_active'] as bool? ?? false,
       );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tutor API aggregates (from /tutor/modules and /tutor/.../chat)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ModulesResponse {
+  final List<TutorModule> currentModules;
+  final List<TutorModule> relatedModules;
+
+  const ModulesResponse({
+    required this.currentModules,
+    required this.relatedModules,
+  });
+
+  /// Group current modules by year, then semester.
+  Map<int, Map<int, List<TutorModule>>> get grouped {
+    final Map<int, Map<int, List<TutorModule>>> result = {};
+    for (final m in currentModules) {
+      result.putIfAbsent(m.yearLevel, () => {});
+      result[m.yearLevel]!.putIfAbsent(m.semester, () => []);
+      result[m.yearLevel]![m.semester]!.add(m);
+    }
+    return result;
+  }
+}
+
+class ChatResponse {
+  final String message;
+  final SessionProgress progress;
+
+  const ChatResponse({required this.message, required this.progress});
+}

@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:reelscholar/models/tutor_models.dart';
+import '../constants/api_constants.dart';
 
 class TutorService {
-  static const String _base =
-      'https://reelscholarapi-main-l5f9h5.laravel.cloud/api';
   static const String _tokenKey = 'auth_token';
 
   // ─── Auth header ────────────────────────────────────────────────────────────
@@ -37,7 +36,7 @@ class TutorService {
   /// Returns modules grouped by year and semester.
   Future<ModulesResponse> getModules() async {
     final r = await http.get(
-      Uri.parse('$_base/tutor/modules'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -74,7 +73,7 @@ class TutorService {
   /// Start or resume a tutor session for a module.
   Future<SessionStartResult> startSession(String moduleId) async {
     final r = await http.post(
-      Uri.parse('$_base/tutor/modules/$moduleId/start'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/start'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -85,7 +84,7 @@ class TutorService {
   /// Send a user message and receive the AI tutor reply.
   Future<ChatResponse> chat(String moduleId, String message) async {
     final r = await http.post(
-      Uri.parse('$_base/tutor/modules/$moduleId/chat'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/chat'),
       headers: await _headers(),
       body: jsonEncode({'message': message}),
     );
@@ -102,7 +101,7 @@ class TutorService {
   /// Fetch the conversation history for a module.
   Future<List<ChatMessage>> getHistory(String moduleId) async {
     final r = await http.get(
-      Uri.parse('$_base/tutor/modules/$moduleId/history'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/history'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -136,7 +135,7 @@ class TutorService {
   /// Get flashcards for a module.
   Future<List<Flashcard>> getFlashcards(String moduleId) async {
     final r = await http.get(
-      Uri.parse('$_base/tutor/modules/$moduleId/flashcards'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/flashcards'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -167,7 +166,7 @@ class TutorService {
   /// Get the concept map graph for a module.
   Future<ConceptMap> getConceptMap(String moduleId) async {
     final r = await http.get(
-      Uri.parse('$_base/tutor/modules/$moduleId/concept-map'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/concept-map'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -178,7 +177,7 @@ class TutorService {
   /// Get the voice lesson script for a module.
   Future<VoiceLesson> getVoiceLesson(String moduleId) async {
     final r = await http.get(
-      Uri.parse('$_base/tutor/modules/$moduleId/voice-lesson'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/voice-lesson'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -189,39 +188,9 @@ class TutorService {
   /// Reset/clear a tutor session to start fresh.
   Future<void> resetSession(String moduleId) async {
     final r = await http.post(
-      Uri.parse('$_base/tutor/modules/$moduleId/reset'),
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/reset'),
       headers: await _headers(),
     );
     _parse(r);
   }
-}
-
-// ─── Response DTOs ───────────────────────────────────────────────────────────
-
-class ModulesResponse {
-  final List<TutorModule> currentModules;
-  final List<TutorModule> relatedModules;
-
-  const ModulesResponse({
-    required this.currentModules,
-    required this.relatedModules,
-  });
-
-  /// Group current modules by year, then semester.
-  Map<int, Map<int, List<TutorModule>>> get grouped {
-    final Map<int, Map<int, List<TutorModule>>> result = {};
-    for (final m in currentModules) {
-      result.putIfAbsent(m.yearLevel, () => {});
-      result[m.yearLevel]!.putIfAbsent(m.semester, () => []);
-      result[m.yearLevel]![m.semester]!.add(m);
-    }
-    return result;
-  }
-}
-
-class ChatResponse {
-  final String message;
-  final SessionProgress progress;
-
-  const ChatResponse({required this.message, required this.progress});
 }

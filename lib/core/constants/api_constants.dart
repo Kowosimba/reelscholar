@@ -1,5 +1,7 @@
 class ApiConstants {
-  static const String baseUrl = 'https://reelscholarapi-main-l5f9h5.laravel.cloud/api';
+  /// Laravel Cloud production API. All services use this base URL.
+  static const String baseUrl =
+      'https://reelscholarapi-main-l5f9h5.laravel.cloud/api';
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
   static const String register = '/auth/register';
@@ -13,6 +15,8 @@ class ApiConstants {
   static const String resendVerification = '/auth/resend-verification';
   static const String verificationLink = '/auth/verification-link';
   static const String fcmToken = '/auth/fcm-token';
+
+  static const String profilePassword = '/profile/password';
 
   // ─── Metadata ──────────────────────────────────────────────────────────────
   static const String faculties = '/meta/faculties';

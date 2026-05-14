@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
+import 'package:reelscholar/models/messaging_models.dart';
+import 'package:reelscholar/providers/messaging_provider.dart';
+import 'package:reelscholar/screens/messaging/chat_thread_screen.dart';
+import 'package:reelscholar/screens/messaging/message_requests_screen.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -19,6 +24,11 @@ class _ChatsScreenState extends State<ChatsScreen>
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
     _tabCtrl.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final m = context.read<MessagingProvider>();
+      m.loadConversations(refresh: true);
+      m.loadRequests();
+    });
   }
 
   @override
@@ -35,24 +45,28 @@ class _ChatsScreenState extends State<ChatsScreen>
       appBar: _buildAppBar(),
       body: Column(
         children: [
-          // ── Search bar ─────────────────────────────────────────────────
           _SearchBar(
             ctrl: _searchCtrl,
             onChanged: (q) => setState(() => _searchQuery = q),
           ),
-
-          // ── Tab bar ───────────────────────────────────────────────────
           _TabBar(ctrl: _tabCtrl),
-
           const Divider(color: AppColors.border, height: 1),
-
-          // ── Tab views ─────────────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabCtrl,
               children: [
-                _GroupsTab(searchQuery: _searchQuery),
-                _MessagesTab(searchQuery: _searchQuery),
+                _ChatsListTab(
+                  searchQuery: _searchQuery,
+                  filter: (c) => c.isGroup,
+                  emptyTitle: 'No study groups yet',
+                  emptySubtitle: 'Join or create a study group to collaborate',
+                ),
+                _ChatsListTab(
+                  searchQuery: _searchQuery,
+                  filter: (c) => c.isDirect,
+                  emptyTitle: 'No messages yet',
+                  emptySubtitle: 'Message a classmate to start a conversation',
+                ),
               ],
             ),
           ),
@@ -60,7 +74,7 @@ class _ChatsScreenState extends State<ChatsScreen>
       ),
       floatingActionButton: _ComposeFAB(
         tabIndex: _tabCtrl.index,
-        onTap: () => _compose(),
+        onTap: _compose,
       ),
     );
   }
@@ -79,13 +93,45 @@ class _ChatsScreenState extends State<ChatsScreen>
         ),
       ),
       actions: [
-        IconButton(
-          icon: const Icon(
-            Icons.search_rounded,
-            color: AppColors.textSecondary,
-            size: 22,
+        Consumer<MessagingProvider>(
+          builder: (_, p, _) => Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.inbox_outlined,
+                    color: AppColors.textSecondary, size: 22),
+                onPressed: () => Navigator.push<void>(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MessageRequestsScreen(),
+                  ),
+                ),
+              ),
+              if (p.pendingRequestCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${p.pendingRequestCount > 9 ? '9+' : p.pendingRequestCount}',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          onPressed: () {},
         ),
         IconButton(
           icon: const Icon(
@@ -100,7 +146,7 @@ class _ChatsScreenState extends State<ChatsScreen>
   }
 
   void _compose() {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _ComposeSheet(isGroup: _tabCtrl.index == 0),
@@ -108,7 +154,86 @@ class _ChatsScreenState extends State<ChatsScreen>
   }
 }
 
-// ─── Search bar ───────────────────────────────────────────────────────────────
+class _ChatsListTab extends StatelessWidget {
+  final String searchQuery;
+  final bool Function(Conversation c) filter;
+  final String emptyTitle;
+  final String emptySubtitle;
+
+  const _ChatsListTab({
+    required this.searchQuery,
+    required this.filter,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MessagingProvider>(
+      builder: (_, p, _) {
+        if (p.convsLoading && p.conversations.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+        if (p.convsError != null && p.conversations.isEmpty) {
+          return _EmptyState(
+            icon: Icons.error_outline_rounded,
+            title: 'Could not load chats',
+            subtitle: p.convsError!,
+            actionLabel: 'Retry',
+            onAction: () => p.loadConversations(refresh: true),
+          );
+        }
+        var list = p.conversations.where(filter).toList();
+        if (searchQuery.isNotEmpty) {
+          final q = searchQuery.toLowerCase();
+          list = list
+              .where((c) => c.displayName.toLowerCase().contains(q))
+              .toList();
+        }
+        if (list.isEmpty) {
+          return _EmptyState(
+            icon: _tabIcon(),
+            title: searchQuery.isNotEmpty ? 'No results' : emptyTitle,
+            subtitle: searchQuery.isNotEmpty
+                ? 'Nothing matches "$searchQuery"'
+                : emptySubtitle,
+            actionLabel: searchQuery.isEmpty ? 'Refresh' : null,
+            onAction: searchQuery.isEmpty
+                ? () => p.loadConversations(refresh: true)
+                : null,
+          );
+        }
+        return RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => p.loadConversations(refresh: true),
+          child: ListView.builder(
+            itemCount: list.length,
+            itemBuilder: (_, i) {
+              final c = list[i];
+              return _ConversationTile(
+                conv: c,
+                onTap: () => Navigator.push<void>(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => ChatThreadScreen(conversationId: c.id),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _tabIcon() =>
+      emptyTitle.contains('group')
+          ? Icons.group_outlined
+          : Icons.chat_bubble_outline_rounded;
+}
+
 class _SearchBar extends StatelessWidget {
   final TextEditingController ctrl;
   final ValueChanged<String> onChanged;
@@ -155,18 +280,6 @@ class _SearchBar extends StatelessWidget {
                 ),
               ),
             ),
-            if (ctrl.text.isNotEmpty)
-              GestureDetector(
-                onTap: () {
-                  ctrl.clear();
-                  onChanged('');
-                },
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 16,
-                  color: AppColors.textTertiary,
-                ),
-              ),
           ],
         ),
       ),
@@ -174,7 +287,6 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ─── Tab bar ──────────────────────────────────────────────────────────────────
 class _TabBar extends StatelessWidget {
   final TabController ctrl;
 
@@ -206,202 +318,33 @@ class _TabBar extends StatelessWidget {
   }
 }
 
-// ─── Study Groups tab ─────────────────────────────────────────────────────────
-class _GroupsTab extends StatelessWidget {
-  final String searchQuery;
-
-  const _GroupsTab({required this.searchQuery});
-
-  static const _groups = [
-    _ConvItem(
-      id: '1',
-      name: 'Physics Revision Squad',
-      subtitle: 'Priya: See you at 6pm in the lab',
-      timeLabel: '15m',
-      unread: 0,
-      isGroup: true,
-      isOnline: false,
-      avatarColor: Color(0xFF6366F1),
-      initial: 'P',
-    ),
-    _ConvItem(
-      id: '2',
-      name: 'Calculus Study Crew',
-      subtitle: 'James: Chapter 7 solutions uploaded',
-      timeLabel: '2h',
-      unread: 5,
-      isGroup: true,
-      isOnline: false,
-      avatarColor: Color(0xFFF59E0B),
-      initial: 'C',
-    ),
-    _ConvItem(
-      id: '3',
-      name: 'Data Structures Masters',
-      subtitle: 'You: Does anyone have the past paper?',
-      timeLabel: 'Wed',
-      unread: 0,
-      isGroup: true,
-      isOnline: false,
-      avatarColor: Color(0xFF0D9488),
-      initial: 'D',
-    ),
-    _ConvItem(
-      id: '4',
-      name: 'Engineering Hackathon Team',
-      subtitle: 'Amara: Submission due tomorrow!',
-      timeLabel: 'Mon',
-      unread: 12,
-      isGroup: true,
-      isOnline: false,
-      avatarColor: Color(0xFFEF4444),
-      initial: 'E',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = searchQuery.isEmpty
-        ? _groups
-        : _groups
-              .where(
-                (g) => g.name.toLowerCase().contains(searchQuery.toLowerCase()),
-              )
-              .toList();
-
-    if (filtered.isEmpty) {
-      return _EmptyState(
-        icon: Icons.group_outlined,
-        title: searchQuery.isNotEmpty
-            ? 'No groups found'
-            : 'No study groups yet',
-        subtitle: searchQuery.isNotEmpty
-            ? 'No groups matching "$searchQuery"'
-            : 'Join or create a study group to collaborate',
-        actionLabel: 'Browse Groups',
-        onAction: () => Navigator.pushNamed(context, '/study-groups'),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: filtered.length,
-      itemBuilder: (_, i) => _ConversationTile(
-        item: filtered[i],
-        onTap: () => Navigator.pushNamed(
-          context,
-          '/conversation',
-          arguments: filtered[i].id,
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Direct Messages tab ──────────────────────────────────────────────────────
-class _MessagesTab extends StatelessWidget {
-  final String searchQuery;
-
-  const _MessagesTab({required this.searchQuery});
-
-  static const _messages = [
-    _ConvItem(
-      id: '10',
-      name: 'David Chen',
-      subtitle: 'Did you get the notes for today?',
-      timeLabel: '2m',
-      unread: 3,
-      isGroup: false,
-      isOnline: true,
-      avatarColor: Color(0xFF0D9488),
-      initial: 'D',
-    ),
-    _ConvItem(
-      id: '11',
-      name: 'Dr. Sarah Williams',
-      subtitle: 'Great submission! Keep it up 👏',
-      timeLabel: '1h',
-      unread: 0,
-      isGroup: false,
-      isOnline: false,
-      avatarColor: Color(0xFF6366F1),
-      initial: 'S',
-    ),
-    _ConvItem(
-      id: '12',
-      name: 'Priya Nair',
-      subtitle: 'Are you joining the revision session?',
-      timeLabel: 'Tue',
-      unread: 1,
-      isGroup: false,
-      isOnline: true,
-      avatarColor: Color(0xFFF59E0B),
-      initial: 'P',
-    ),
-    _ConvItem(
-      id: '13',
-      name: 'James Mutasa',
-      subtitle: 'Thanks for sharing those notes 🙏',
-      timeLabel: 'Mon',
-      unread: 0,
-      isGroup: false,
-      isOnline: false,
-      avatarColor: Color(0xFF22C55E),
-      initial: 'J',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = searchQuery.isEmpty
-        ? _messages
-        : _messages
-              .where(
-                (m) => m.name.toLowerCase().contains(searchQuery.toLowerCase()),
-              )
-              .toList();
-
-    if (filtered.isEmpty) {
-      return _EmptyState(
-        icon: Icons.chat_bubble_outline_rounded,
-        title: searchQuery.isNotEmpty ? 'No messages found' : 'No messages yet',
-        subtitle: searchQuery.isNotEmpty
-            ? 'No conversations matching "$searchQuery"'
-            : 'Message a classmate to start a conversation',
-        actionLabel: 'Find People',
-        onAction: () => Navigator.pushNamed(context, '/search-users'),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: filtered.length,
-      itemBuilder: (_, i) => _ConversationTile(
-        item: filtered[i],
-        onTap: () => Navigator.pushNamed(
-          context,
-          '/conversation',
-          arguments: filtered[i].id,
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Conversation tile ────────────────────────────────────────────────────────
 class _ConversationTile extends StatelessWidget {
-  final _ConvItem item;
+  final Conversation conv;
   final VoidCallback onTap;
 
-  const _ConversationTile({required this.item, required this.onTap});
+  const _ConversationTile({required this.conv, required this.onTap});
+
+  String _timeLabel() {
+    final dt = conv.lastMessageAt;
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${dt.day}/${dt.month}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final unread = conv.unreadCount;
+    return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: item.unread > 0
-              ? AppColors.primarySubtle.withValues(alpha: 0.3)
+          color: unread > 0
+              ? AppColors.primarySubtle.withValues(alpha: 0.35)
               : AppColors.white,
           border: const Border(
             bottom: BorderSide(color: AppColors.border, width: 1),
@@ -409,45 +352,38 @@ class _ConversationTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar with online dot / group badge
             Stack(
               children: [
                 Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: item.avatarColor,
+                    gradient: _avatarGradient(conv.displayName),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: Text(
-                      item.initial,
-                      style: const TextStyle(
-                        fontFamily: AppFonts.sora,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: conv.avatarUrl != null &&
+                            conv.avatarUrl!.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              conv.avatarUrl!,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Text(
+                            conv.displayInitials,
+                            style: const TextStyle(
+                              fontFamily: AppFonts.sora,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
-                // Online dot (DMs only)
-                if (!item.isGroup && item.isOnline)
-                  Positioned(
-                    bottom: 1,
-                    right: 1,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                // Group badge
-                if (item.isGroup)
+                if (conv.isGroup)
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -468,10 +404,7 @@ class _ConversationTile extends StatelessWidget {
                   ),
               ],
             ),
-
             const SizedBox(width: 14),
-
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,11 +413,11 @@ class _ConversationTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          item.name,
+                          conv.displayName,
                           style: TextStyle(
                             fontFamily: AppFonts.sora,
                             fontSize: 14,
-                            fontWeight: item.unread > 0
+                            fontWeight: unread > 0
                                 ? FontWeight.w800
                                 : FontWeight.w600,
                             color: AppColors.textPrimary,
@@ -493,14 +426,14 @@ class _ConversationTile extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        item.timeLabel,
+                        _timeLabel(),
                         style: TextStyle(
                           fontFamily: AppFonts.dmSans,
                           fontSize: 11,
-                          color: item.unread > 0
+                          color: unread > 0
                               ? AppColors.primary
                               : AppColors.textTertiary,
-                          fontWeight: item.unread > 0
+                          fontWeight: unread > 0
                               ? FontWeight.w700
                               : FontWeight.w400,
                         ),
@@ -510,16 +443,22 @@ class _ConversationTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
+                      if (conv.isMuted)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.volume_off_rounded,
+                              size: 12, color: AppColors.textTertiary),
+                        ),
                       Expanded(
                         child: Text(
-                          item.subtitle,
+                          conv.lastMessagePreview ?? '',
                           style: TextStyle(
                             fontFamily: AppFonts.dmSans,
                             fontSize: 13,
-                            color: item.unread > 0
+                            color: unread > 0
                                 ? AppColors.textPrimary
                                 : AppColors.textSecondary,
-                            fontWeight: item.unread > 0
+                            fontWeight: unread > 0
                                 ? FontWeight.w600
                                 : FontWeight.w400,
                           ),
@@ -527,7 +466,7 @@ class _ConversationTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (item.unread > 0) ...[
+                      if (unread > 0) ...[
                         const SizedBox(width: 8),
                         Container(
                           constraints: const BoxConstraints(minWidth: 20),
@@ -539,7 +478,7 @@ class _ConversationTile extends StatelessWidget {
                           ),
                           child: Center(
                             child: Text(
-                              item.unread > 99 ? '99+' : '${item.unread}',
+                              unread > 99 ? '99+' : '$unread',
                               style: const TextStyle(
                                 fontFamily: AppFonts.dmSans,
                                 fontSize: 10,
@@ -560,9 +499,18 @@ class _ConversationTile extends StatelessWidget {
       ),
     );
   }
+
+  static LinearGradient _avatarGradient(String name) {
+    final h = name.codeUnits.fold<int>(0, (a, b) => a + b) % 360;
+    return LinearGradient(
+      colors: [
+        HSLColor.fromAHSL(1, h.toDouble(), 0.6, 0.4).toColor(),
+        HSLColor.fromAHSL(1, (h + 40).toDouble() % 360, 0.7, 0.3).toColor(),
+      ],
+    );
+  }
 }
 
-// ─── Compose FAB ──────────────────────────────────────────────────────────────
 class _ComposeFAB extends StatelessWidget {
   final int tabIndex;
   final VoidCallback onTap;
@@ -593,7 +541,6 @@ class _ComposeFAB extends StatelessWidget {
   }
 }
 
-// ─── Compose sheet ────────────────────────────────────────────────────────────
 class _ComposeSheet extends StatelessWidget {
   final bool isGroup;
 
@@ -602,14 +549,13 @@ class _ComposeSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: MediaQuery.of(context).size.height * 0.45,
       decoration: const BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          // Handle
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
@@ -647,104 +593,38 @@ class _ComposeSheet extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.muted,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.search_rounded,
-                    size: 18,
-                    color: AppColors.textTertiary,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    isGroup
-                        ? 'Search classmates to add…'
-                        : 'Search for a person…',
-                    style: const TextStyle(
-                      fontFamily: AppFonts.dmSans,
-                      fontSize: 14,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'SUGGESTED',
-                style: TextStyle(
-                  fontFamily: AppFonts.dmSans,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textTertiary,
-                  letterSpacing: 0.08,
-                ),
+          ListTile(
+            leading: const Icon(Icons.person_search_rounded,
+                color: AppColors.primary),
+            title: const Text(
+              'Find people',
+              style: TextStyle(
+                fontFamily: AppFonts.dmSans,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          // Placeholder suggestions
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 3,
-              itemBuilder: (_, i) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: [
-                    AppColors.primary,
-                    AppColors.secondary,
-                    AppColors.warning,
-                  ][i],
-                  child: Text(
-                    ['D', 'P', 'J'][i],
-                    style: const TextStyle(
-                      fontFamily: AppFonts.sora,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  ['David Chen', 'Priya Nair', 'James Mutasa'][i],
-                  style: const TextStyle(
-                    fontFamily: AppFonts.dmSans,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                subtitle: Text(
-                  [
-                    'Engineering · Year 3',
-                    'Sciences · Year 2',
-                    'CS · Year 4',
-                  ][i],
-                  style: const TextStyle(
-                    fontFamily: AppFonts.dmSans,
-                    fontSize: 12,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-                trailing: const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: AppColors.textTertiary,
-                ),
-                onTap: () => Navigator.pop(context),
+            subtitle: Text(
+              isGroup
+                  ? 'Add members from search (coming soon)'
+                  : 'Search users to send a message request',
+              style: const TextStyle(
+                fontFamily: AppFonts.dmSans,
+                fontSize: 12,
+                color: AppColors.textTertiary,
               ),
             ),
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Use search from your profile area to find people. Message requests open from the inbox icon.',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -752,7 +632,6 @@ class _ComposeSheet extends StatelessWidget {
   }
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -832,29 +711,4 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─── Data model ───────────────────────────────────────────────────────────────
-class _ConvItem {
-  final String id;
-  final String name;
-  final String subtitle;
-  final String timeLabel;
-  final int unread;
-  final bool isGroup;
-  final bool isOnline;
-  final Color avatarColor;
-  final String initial;
-
-  const _ConvItem({
-    required this.id,
-    required this.name,
-    required this.subtitle,
-    required this.timeLabel,
-    required this.unread,
-    required this.isGroup,
-    required this.isOnline,
-    required this.avatarColor,
-    required this.initial,
-  });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/main_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/chats/chats_screen.dart';
+import 'screens/messaging/chat_thread_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -15,6 +16,15 @@ import 'screens/reels/search_reels_screen.dart';
 import 'screens/reels/bookmarks_screen.dart';
 import 'screens/reels/upload_reel_screen.dart';
 import 'screens/tutor/modules_screen.dart';
+import 'screens/study_groups/study_groups_screen.dart';
+import 'screens/profile/my_profile_screen.dart';
+import 'screens/profile/settings_screen.dart' hide ChangePasswordScreen;
+import 'screens/social/user_search_screen.dart';
+import 'screens/social/public_profile_screen.dart';
+import 'screens/social/followers_screen.dart';
+import 'screens/social/blocked_users_screen.dart';
+import 'screens/hackathons/hackathon_list_screen.dart';
+import 'screens/hackathons/hackathon_detail_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -71,29 +81,38 @@ class AppRouter {
     uploadReel: (_) => const UploadReelScreen(),
     modules: (_) => const ModulesScreen(),
     chats: (_) => const ChatsScreen(),
+    studyGroups: (_) => const StudyGroupsScreen(),
     notifications: (_) => const NotificationsScreen(),
+    hackathons: (_) => const HackathonListScreen(),
+    profile: (_) => const MyProfileScreen(),
+    settings: (_) => const SettingsScreen(),
+    searchUsers: (_) => const UserSearchScreen(),
+    publicProfile: (_) => const PublicProfileScreen(userId: ''),
   };
 
   // ── On-generate route (for routes needing arguments) ─────────────────────────
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case publicProfile:
-        final userId = settings.arguments as String?;
+        final userId = settings.arguments as String? ?? '';
+        return _slide(PublicProfileScreen(userId: userId));
+
+      case '/followers':
+        final args = settings.arguments as Map<String, dynamic>?;
+        final uid = args?['userId'] as String? ?? '';
+        final name = args?['userName'] as String? ?? '';
+        final tab = args?['tab'] as int? ?? 0;
         return _slide(
-          // ProfileScreen(userId: userId ?? ''),
-          Scaffold(
-            appBar: AppBar(title: const Text('Profile')),
-            body: Center(child: Text('Profile: $userId')),
-          ),
-        );
+            FollowersScreen(userId: uid, userName: name, initialTab: tab));
+
+      case '/blocked-users':
+        return _slide(const BlockedUsersScreen());
 
       case conversation:
         final convId = settings.arguments as String?;
+        if (convId == null || convId.isEmpty) return null;
         return _slide(
-          Scaffold(
-            appBar: AppBar(title: const Text('Conversation')),
-            body: Center(child: Text('Conversation: $convId')),
-          ),
+          ChatThreadScreen(conversationId: convId),
         );
 
       case moduleDetail:
@@ -104,9 +123,14 @@ class AppRouter {
         );
 
       case reelDetail:
-        // final reel = settings.arguments as Reel;
-        // return _slide(ReelDetailScreen(reel: reel));
         return _slide(const Scaffold(body: Center(child: Text('Reel Detail'))));
+
+      case hackathons:
+        return _slide(const HackathonListScreen());
+
+      case '/hackathon-detail':
+        final hackId = settings.arguments as String? ?? '';
+        return _slide(HackathonDetailScreen(hackId: hackId));
 
       default:
         return null;

@@ -270,7 +270,7 @@ class AuthService {
     required String newPasswordConfirmation,
   }) async {
     final response = await http.put(
-      Uri.parse('${ApiConstants.baseUrl}/profile/password'),
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.profilePassword}'),
       headers: await _headers(auth: true),
       body: jsonEncode({
         'current_password': currentPassword,

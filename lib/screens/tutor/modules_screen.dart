@@ -6,7 +6,10 @@ import 'widgets/tutor_widgets.dart';
 import 'module_detail_screen.dart';
 
 class ModulesScreen extends StatefulWidget {
-  const ModulesScreen({super.key});
+  /// Opens the app drawer when embedded in [MainScreen].
+  final VoidCallback? onMenuTap;
+
+  const ModulesScreen({super.key, this.onMenuTap});
 
   @override
   State<ModulesScreen> createState() => _ModulesScreenState();
@@ -58,6 +61,29 @@ class _ModulesScreenState extends State<ModulesScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   child: Row(
                     children: [
+                      if (widget.onMenuTap != null) ...[
+                        GestureDetector(
+                          onTap: widget.onMenuTap,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: _darkMode
+                                  ? TColors.darkCard
+                                  : TColors.primarySubtle,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.menu_rounded,
+                              size: 20,
+                              color: _darkMode
+                                  ? TColors.darkText
+                                  : TColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +202,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: _filters.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) {
                       final (key, label) = _filters[i];
                       final active = prov.moduleFilter == key;

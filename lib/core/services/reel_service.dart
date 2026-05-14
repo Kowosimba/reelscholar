@@ -3,10 +3,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:reelscholar/models/reel_models.dart';
+import '../constants/api_constants.dart';
 
 class ReelService {
-  static const String _base =
-      'https://reelscholarapi-main-l5f9h5.laravel.cloud/api';
   static const String _tokenKey = 'auth_token';
 
   // ─── Auth header ────────────────────────────────────────────────────────────
@@ -47,7 +46,7 @@ class ReelService {
     int perPage = 15,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels',
+      '${ApiConstants.baseUrl}/reels',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -60,7 +59,7 @@ class ReelService {
     int perPage = 15,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels/for-you',
+      '${ApiConstants.baseUrl}/reels/for-you',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -73,7 +72,7 @@ class ReelService {
     int perPage = 15,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels/trending',
+      '${ApiConstants.baseUrl}/reels/trending',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -86,7 +85,7 @@ class ReelService {
     int page = 1,
     int perPage = 15,
   }) async {
-    final uri = Uri.parse('$_base/reels/search').replace(
+    final uri = Uri.parse('${ApiConstants.baseUrl}/reels/search').replace(
       queryParameters: {'q': query, 'page': '$page', 'per_page': '$perPage'},
     );
     final r = await http.get(uri, headers: await _headers());
@@ -97,7 +96,7 @@ class ReelService {
   // ─── GET /reels/trending-tags ───────────────────────────────────────────────
   Future<List<Hashtag>> getTrendingTags() async {
     final r = await http.get(
-      Uri.parse('$_base/reels/trending-tags'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/trending-tags'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -110,7 +109,7 @@ class ReelService {
   // ─── GET /reels/{id} ────────────────────────────────────────────────────────
   Future<Reel> getReel(String id) async {
     final r = await http.get(
-      Uri.parse('$_base/reels/$id'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$id'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -125,7 +124,7 @@ class ReelService {
     void Function(double progress)? onProgress,
   }) async {
     final token = await _token();
-    final request = http.MultipartRequest('POST', Uri.parse('$_base/reels'));
+    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}/reels'));
 
     request.headers['Accept'] = 'application/json';
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
@@ -147,7 +146,7 @@ class ReelService {
   // ─── DELETE /reels/{id} ─────────────────────────────────────────────────────
   Future<void> deleteReel(String id) async {
     final r = await http.delete(
-      Uri.parse('$_base/reels/$id'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$id'),
       headers: await _headers(),
     );
     _parse(r);
@@ -160,7 +159,7 @@ class ReelService {
     int perPage = 15,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels/user/$userId',
+      '${ApiConstants.baseUrl}/reels/user/$userId',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -173,7 +172,7 @@ class ReelService {
     int perPage = 20,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels/bookmarks',
+      '${ApiConstants.baseUrl}/reels/bookmarks',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -183,7 +182,7 @@ class ReelService {
   // ─── POST /reels/{id}/like — toggle ────────────────────────────────────────
   Future<bool> toggleLike(String reelId) async {
     final r = await http.post(
-      Uri.parse('$_base/reels/$reelId/like'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/like'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -193,7 +192,7 @@ class ReelService {
   // ─── POST /reels/{id}/bookmark — toggle ────────────────────────────────────
   Future<bool> toggleBookmark(String reelId) async {
     final r = await http.post(
-      Uri.parse('$_base/reels/$reelId/bookmark'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/bookmark'),
       headers: await _headers(),
     );
     final body = _parse(r);
@@ -203,7 +202,7 @@ class ReelService {
   // ─── POST /reels/{id}/view ──────────────────────────────────────────────────
   Future<void> recordView(String reelId, {int? watchSeconds}) async {
     await http.post(
-      Uri.parse('$_base/reels/$reelId/view'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/view'),
       headers: await _headers(),
       body: jsonEncode({'watch_seconds': watchSeconds}),
     );
@@ -213,7 +212,7 @@ class ReelService {
   // ─── POST /reels/{id}/share ─────────────────────────────────────────────────
   Future<void> recordShare(String reelId) async {
     await http.post(
-      Uri.parse('$_base/reels/$reelId/share'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/share'),
       headers: await _headers(),
     );
   }
@@ -225,7 +224,7 @@ class ReelService {
     int perPage = 20,
   }) async {
     final uri = Uri.parse(
-      '$_base/reels/$reelId/comments',
+      '${ApiConstants.baseUrl}/reels/$reelId/comments',
     ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -239,7 +238,7 @@ class ReelService {
   // ─── POST /reels/{id}/comments ──────────────────────────────────────────────
   Future<ReelComment> postComment(String reelId, String body) async {
     final r = await http.post(
-      Uri.parse('$_base/reels/$reelId/comments'),
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/comments'),
       headers: await _headers(),
       body: jsonEncode({'body': body}),
     );
@@ -254,9 +253,12 @@ class ReelService {
     String? replyToUserId,
   }) async {
     final r = await http.post(
-      Uri.parse('$_base/comments/$commentId/reply'),
+      Uri.parse('${ApiConstants.baseUrl}/comments/$commentId/reply'),
       headers: await _headers(),
-      body: jsonEncode({'body': body, 'reply_to_user_id': ?replyToUserId}),
+      body: jsonEncode({
+        'body': body,
+        'reply_to_user_id': ?replyToUserId,
+      }),
     );
     final resp = _parse(r);
     return ReelComment.fromJson(resp['data'] as Map<String, dynamic>);
@@ -265,7 +267,7 @@ class ReelService {
   // ─── GET /comments/{id}/replies ─────────────────────────────────────────────
   Future<List<ReelComment>> getReplies(String commentId, {int page = 1}) async {
     final uri = Uri.parse(
-      '$_base/comments/$commentId/replies',
+      '${ApiConstants.baseUrl}/comments/$commentId/replies',
     ).replace(queryParameters: {'page': '$page'});
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
@@ -278,7 +280,7 @@ class ReelService {
   // ─── POST /comments/{id}/like — toggle ──────────────────────────────────────
   Future<void> toggleCommentLike(String commentId) async {
     await http.post(
-      Uri.parse('$_base/comments/$commentId/like'),
+      Uri.parse('${ApiConstants.baseUrl}/comments/$commentId/like'),
       headers: await _headers(),
     );
   }
@@ -286,7 +288,7 @@ class ReelService {
   // ─── DELETE /comments/{id} ──────────────────────────────────────────────────
   Future<void> deleteComment(String commentId) async {
     final r = await http.delete(
-      Uri.parse('$_base/comments/$commentId'),
+      Uri.parse('${ApiConstants.baseUrl}/comments/$commentId'),
       headers: await _headers(),
     );
     _parse(r);
@@ -294,9 +296,10 @@ class ReelService {
 
   // ─── GET /topics ────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getTopics({String? query}) async {
-    final uri = Uri.parse(
-      '$_base/topics',
-    ).replace(queryParameters: {'q': ?query});
+    final base = Uri.parse('${ApiConstants.baseUrl}/topics');
+    final uri = query != null && query.isNotEmpty
+        ? base.replace(queryParameters: {'q': query})
+        : base;
     final r = await http.get(uri, headers: await _headers());
     final body = _parse(r);
     final data = body['data'] as List<dynamic>? ?? [];

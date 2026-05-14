@@ -148,7 +148,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
       // ── Floating action ───────────────────────────────────────────────────
       floatingActionButton: Consumer<TutorProvider>(
-        builder: (_, prov, __) => prov.messages.isEmpty
+        builder: (_, prov, _) => prov.messages.isEmpty
             ? const SizedBox.shrink()
             : FloatingActionButton.extended(
                 backgroundColor: TColors.primary,

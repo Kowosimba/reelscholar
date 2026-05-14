@@ -5,6 +5,17 @@ import 'providers/navigation_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reel_provider.dart';
 import 'providers/tutor_provider.dart';
+import 'providers/quiz_provider.dart';
+import 'providers/messaging_provider.dart';
+import 'providers/study_group_provider.dart';
+import 'providers/profile_provider.dart';
+import 'providers/social_provider.dart';
+import 'core/services/messaging_service.dart';
+import 'core/services/study_group_service.dart';
+import 'core/services/profile_service.dart';
+import 'core/services/social_service.dart';
+import 'core/services/hackathon_service.dart';
+import 'providers/hackathon_provider.dart';
 import 'core/constants/app_colors.dart';
 import 'app_router.dart';
 
@@ -31,6 +42,19 @@ class ReelScholarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ReelProvider()),
         ChangeNotifierProvider(create: (_) => TutorProvider()),
+        ChangeNotifierProvider(create: (_) => QuizProvider()),
+        ChangeNotifierProvider(create: (_) => StudyGroupProvider(StudyGroupService())),
+        ChangeNotifierProvider(create: (_) => ProfileProvider(ProfileService())),
+        ChangeNotifierProvider(create: (_) => SocialProvider(SocialService())),
+        ChangeNotifierProvider(create: (_) => HackathonProvider(HackathonService())),
+        ChangeNotifierProxyProvider<AuthProvider, MessagingProvider>(
+          create: (_) => MessagingProvider(MessagingService()),
+          update: (_, auth, previous) {
+            final m = previous ?? MessagingProvider(MessagingService());
+            m.syncFromAuth(auth.user?.uid);
+            return m;
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'ReelScholar',

@@ -8,7 +8,10 @@ import 'widgets/reel_player_item.dart';
 import 'search_reels_screen.dart';
 
 class ReelsScreen extends StatefulWidget {
-  const ReelsScreen({super.key});
+  /// Opens the app drawer when embedded in [MainScreen].
+  final VoidCallback? onMenuTap;
+
+  const ReelsScreen({super.key, this.onMenuTap});
 
   @override
   State<ReelsScreen> createState() => _ReelsScreenState();
@@ -140,6 +143,25 @@ class _ReelsScreenState extends State<ReelsScreen>
               ),
               child: Row(
                 children: [
+                  if (widget.onMenuTap != null) ...[
+                    GestureDetector(
+                      onTap: widget.onMenuTap,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.menu_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
                   // Brand / tab selector
                   Expanded(
                     child: Consumer<ReelProvider>(
