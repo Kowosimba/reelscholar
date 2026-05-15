@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/profile_provider.dart';
 import 'package:reelscholar/core/services/profile_service.dart';
+import 'edit_profile_screen.dart';
+import '../social/blocked_users_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -28,7 +30,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -52,6 +53,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsCard(
             children: [
               _NavTile(
+                icon: Icons.person_outline_rounded,
+                iconBg: const Color(0xFFEFF6FF),
+                iconColor: const Color(0xFF3B82F6),
+                label: 'Edit Profile',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                ),
+              ),
+              _NavTile(
                 icon: Icons.lock_outline_rounded,
                 iconBg: AppColors.primarySubtle,
                 iconColor: AppColors.primary,
@@ -60,6 +71,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const ChangePasswordScreen()),
+                ),
+              ),
+              _NavTile(
+                icon: Icons.shield_outlined,
+                iconBg: const Color(0xFFF1F5F9),
+                iconColor: const Color(0xFF64748B),
+                label: 'Privacy & Security',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
                 ),
               ),
             ],
@@ -182,6 +203,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 label: 'About ReelScholar',
                 subtitle: 'Version 1.0.0',
                 onTap: () {},
+              ),
+              _NavTile(
+                icon: Icons.help_outline_rounded,
+                iconBg: const Color(0xFFDCFCE7),
+                iconColor: const Color(0xFF16A34A),
+                label: 'Help & Support',
+                onTap: () {},
                 isLast: true,
               ),
             ],
@@ -297,9 +325,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,

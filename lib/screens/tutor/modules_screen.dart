@@ -17,7 +17,6 @@ class ModulesScreen extends StatefulWidget {
 
 class _ModulesScreenState extends State<ModulesScreen> {
   final _searchCtrl = TextEditingController();
-  bool _darkMode = false;
 
   static const _filters = [
     ('all', 'All'),
@@ -42,14 +41,13 @@ class _ModulesScreenState extends State<ModulesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = _darkMode ? TColors.dark : Colors.white;
-    final textColor = _darkMode ? TColors.darkText : TColors.textPrimary;
-    final subColor = _darkMode ? TColors.darkMuted : TColors.textSecondary;
-    final searchBg = _darkMode ? TColors.darkCard : TColors.muted;
-    final searchIcon = _darkMode ? TColors.darkMuted : TColors.textTertiary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? TColors.darkText : TColors.textPrimary;
+    final subColor = isDark ? TColors.darkMuted : TColors.textSecondary;
+    final searchBg = isDark ? TColors.darkCard : TColors.muted;
+    final searchIcon = isDark ? TColors.darkMuted : TColors.textTertiary;
 
     return Scaffold(
-      backgroundColor: bg,
       body: SafeArea(
         child: Consumer<TutorProvider>(
           builder: (_, prov, _) {
@@ -68,7 +66,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: _darkMode
+                              color: isDark
                                   ? TColors.darkCard
                                   : TColors.primarySubtle,
                               shape: BoxShape.circle,
@@ -76,7 +74,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                             child: Icon(
                               Icons.menu_rounded,
                               size: 20,
-                              color: _darkMode
+                              color: isDark
                                   ? TColors.darkText
                                   : TColors.primary,
                             ),
@@ -109,29 +107,34 @@ class _ModulesScreenState extends State<ModulesScreen> {
                           ],
                         ),
                       ),
-                      // Dark mode toggle
-                      GestureDetector(
-                        onTap: () => setState(() => _darkMode = !_darkMode),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: _darkMode
-                                ? TColors.darkCard
-                                : TColors.primarySubtle,
-                            shape: BoxShape.circle,
+                      if (prov.modulesState == TutorLoadState.loading)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: TColors.primary,
                           ),
-                          child: Icon(
-                            _darkMode
-                                ? Icons.light_mode_rounded
-                                : Icons.dark_mode_outlined,
-                            size: 18,
-                            color: _darkMode
-                                ? TColors.primaryLight
-                                : TColors.primary,
+                        )
+                      else
+                        GestureDetector(
+                          onTap: () => prov.loadModules(refresh: true),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? TColors.darkCard
+                                  : TColors.primarySubtle,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.refresh_rounded,
+                              size: 20,
+                              color: isDark ? TColors.darkText : TColors.primary,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -217,14 +220,14 @@ class _ModulesScreenState extends State<ModulesScreen> {
                           decoration: BoxDecoration(
                             color: active
                                 ? TColors.primary
-                                : _darkMode
+                                : isDark
                                 ? TColors.darkCard
                                 : TColors.muted,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: active
                                   ? TColors.primary
-                                  : _darkMode
+                                  : isDark
                                   ? TColors.darkBorder
                                   : TColors.border,
                             ),
@@ -237,7 +240,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                               fontWeight: FontWeight.w600,
                               color: active
                                   ? Colors.white
-                                  : _darkMode
+                                  : isDark
                                   ? TColors.darkMuted
                                   : TColors.textSecondary,
                             ),
@@ -319,12 +322,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
                   .map(
                     (m) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _darkMode
-                          ? ModuleCardDark(
-                              module: m,
-                              onTap: () => _openModule(m),
-                            )
-                          : ModuleCard(module: m, onTap: () => _openModule(m)),
+                      child: ModuleCard(module: m, onTap: () => _openModule(m)),
                     ),
                   ),
             ],
@@ -340,9 +338,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
             ...response.relatedModules.map(
               (m) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _darkMode
-                    ? ModuleCardDark(module: m, onTap: () => _openModule(m))
-                    : ModuleCard(module: m, onTap: () => _openModule(m)),
+                child: ModuleCard(module: m, onTap: () => _openModule(m)),
               ),
             ),
           ],

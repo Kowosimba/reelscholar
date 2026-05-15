@@ -125,9 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     final unreadCount = _all.where((n) => !n.isRead).length;
 
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(

@@ -16,6 +16,7 @@ import 'core/services/profile_service.dart';
 import 'core/services/social_service.dart';
 import 'core/services/hackathon_service.dart';
 import 'providers/hackathon_provider.dart';
+import 'providers/theme_provider.dart';
 import 'core/constants/app_colors.dart';
 import 'app_router.dart';
 
@@ -55,34 +56,45 @@ class ReelScholarApp extends StatelessWidget {
             return m;
           },
         ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'ReelScholar',
-        debugShowCheckedModeBanner: false,
-        theme: _buildTheme(),
-        initialRoute: AppRouter.home,
-        routes: AppRouter.routes,
-        onGenerateRoute: AppRouter.onGenerateRoute,
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) => MaterialApp(
+          title: 'ReelScholar',
+          debugShowCheckedModeBanner: false,
+          theme: _buildTheme(Brightness.light),
+          darkTheme: _buildTheme(Brightness.dark),
+          themeMode: theme.themeMode,
+          initialRoute: AppRouter.splash,
+          routes: AppRouter.routes,
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
       ),
     );
   }
 
-  ThemeData _buildTheme() {
+  ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF020617) : AppColors.white;
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+
     return ThemeData(
       useMaterial3: true,
+      brightness: brightness,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: AppColors.white,
+        surface: surfaceColor,
         error: AppColors.error,
+        brightness: brightness,
       ),
-      scaffoldBackgroundColor: AppColors.white,
+      scaffoldBackgroundColor: surfaceColor,
       fontFamily: AppFonts.dmSans,
 
       // AppBar
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.white,
+      appBarTheme: AppBarTheme(
+        backgroundColor: surfaceColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
@@ -90,12 +102,12 @@ class ReelScholarApp extends StatelessWidget {
           fontFamily: AppFonts.sora,
           fontSize: 18,
           fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
+          color: textColor,
         ),
-        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: textColor),
         systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.light,
-          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         ),
       ),
 

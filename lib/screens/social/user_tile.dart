@@ -15,6 +15,7 @@ class UserTile extends StatelessWidget {
   final bool showFollowBtn;
   final bool showBlockedBadge;
   final bool showMutualBadge;
+  final Widget? secondaryTrailing;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -24,6 +25,7 @@ class UserTile extends StatelessWidget {
     this.showFollowBtn = true,
     this.showBlockedBadge = false,
     this.showMutualBadge = true,
+    this.secondaryTrailing,
     this.trailing,
     this.onTap,
   });
@@ -165,9 +167,15 @@ class UserTile extends StatelessWidget {
             const SizedBox(width: 8),
             // Trailing: custom or follow button
             trailing ??
-                (showFollowBtn
-                    ? _FollowButton(user: user)
-                    : const SizedBox.shrink()),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showFollowBtn) _FollowButton(user: user),
+                    if (showFollowBtn && secondaryTrailing != null)
+                      const SizedBox(width: 8),
+                    ?secondaryTrailing,
+                  ],
+                ),
           ],
         ),
       ),

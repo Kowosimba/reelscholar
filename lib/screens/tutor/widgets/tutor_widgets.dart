@@ -73,9 +73,9 @@ class ModuleCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: TColors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: TColors.border, width: 1),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -106,11 +106,11 @@ class ModuleCard extends StatelessWidget {
                 children: [
                   Text(
                     module.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Sora',
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: TColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -118,10 +118,10 @@ class ModuleCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     module.code,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 11,
-                      color: TColors.textTertiary,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -148,10 +148,10 @@ class ModuleCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   module.isCompleted ? 'complete' : 'done',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 10,
-                    color: TColors.textTertiary,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -341,7 +341,7 @@ class _ProgressBar extends StatelessWidget {
             height: 5,
             width: constraints.maxWidth,
             decoration: BoxDecoration(
-              color: TColors.border,
+              color: Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -468,21 +468,21 @@ class TutorEmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Sora',
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: TColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
-                color: TColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
                 height: 1.55,
               ),
             ),
@@ -564,11 +564,11 @@ class SectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Sora',
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: TColors.textTertiary,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               letterSpacing: 0.1,
             ),
           ),
@@ -576,10 +576,10 @@ class SectionHeader extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 11,
-                color: TColors.textTertiary,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],

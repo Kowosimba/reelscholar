@@ -1,9 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/app_colors.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
+import 'package:video_player/video_player.dart';
+
+import 'widgets/video_preview_controller_factory.dart';
 
 class UploadReelScreen extends StatefulWidget {
   const UploadReelScreen({super.key});
@@ -13,7 +15,11 @@ class UploadReelScreen extends StatefulWidget {
 }
 
 class _UploadReelScreenState extends State<UploadReelScreen> {
-  File? _video;
+  XFile? _video;
+  VideoPlayerController? _previewController;
+  bool _previewReady = false;
+  bool _previewFailed = false;
+
   final _captionCtrl = TextEditingController();
   final _hashtagCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -21,12 +27,8 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
   Map<String, dynamic>? _selectedTopic;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   void dispose() {
+    _disposePreview();
     _captionCtrl.dispose();
     _hashtagCtrl.dispose();
     super.dispose();
@@ -39,7 +41,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
       maxDuration: const Duration(minutes: 1),
     );
     if (picked != null) {
-      setState(() => _video = File(picked.path));
+      await _setVideo(picked);
     }
   }
 
@@ -50,8 +52,70 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
       maxDuration: const Duration(minutes: 1),
     );
     if (picked != null) {
-      setState(() => _video = File(picked.path));
+      await _setVideo(picked);
     }
+  }
+
+  Future<void> _setVideo(XFile picked) async {
+    await _disposePreview();
+    if (!mounted) return;
+
+    setState(() {
+      _video = picked;
+      _previewReady = false;
+      _previewFailed = false;
+    });
+
+    final controller = createVideoPreviewController(picked.path);
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.play();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _previewController = controller;
+        _previewReady = true;
+      });
+    } catch (_) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() {
+        _previewController = null;
+        _previewFailed = true;
+      });
+    }
+  }
+
+  Future<void> _disposePreview() async {
+    final controller = _previewController;
+    _previewController = null;
+    if (controller != null) {
+      await controller.dispose();
+    }
+  }
+
+  Future<void> _clearVideo() async {
+    await _disposePreview();
+    if (!mounted) return;
+    setState(() {
+      _video = null;
+      _previewReady = false;
+      _previewFailed = false;
+    });
+  }
+
+  void _togglePreviewPlayback() {
+    final controller = _previewController;
+    if (controller == null || !_previewReady) return;
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
+    setState(() {});
   }
 
   Future<void> _post() async {
@@ -65,7 +129,6 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
       return;
     }
 
-    // Build caption with hashtags
     final rawCaption = _captionCtrl.text.trim();
     final tags = _hashtagCtrl.text.trim();
     final caption = tags.isNotEmpty ? '$rawCaption\n$tags' : rawCaption;
@@ -81,7 +144,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
     if (reel != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Reel posted! 🎉'),
+          content: Text('Reel posted!'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.success,
         ),
@@ -128,9 +191,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: TextButton(
-                  onPressed: (prov.isUploading || _video == null)
-                      ? null
-                      : _post,
+                  onPressed: (prov.isUploading || _video == null) ? null : _post,
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -170,7 +231,6 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Upload progress ─────────────────────────────────────
                   if (prov.isUploading) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -226,12 +286,10 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                       ),
                     ),
                   ],
-
-                  // ── Video picker ────────────────────────────────────────
                   GestureDetector(
                     onTap: _showPickerSheet,
                     child: Container(
-                      height: 200,
+                      height: 220,
                       decoration: BoxDecoration(
                         color: AppColors.backgroundMuted,
                         borderRadius: BorderRadius.circular(16),
@@ -240,9 +298,6 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                               ? AppColors.primary
                               : AppColors.borderMedium,
                           width: _video != null ? 2 : 1.5,
-                          style: _video == null
-                              ? BorderStyle.solid
-                              : BorderStyle.solid,
                         ),
                       ),
                       child: _video == null
@@ -288,55 +343,106 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Container(
-                                    color: Colors.black87,
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.videocam_rounded,
-                                        size: 48,
-                                        color: Colors.white54,
-                                      ),
+                                  GestureDetector(
+                                    onTap: _togglePreviewPlayback,
+                                    child: Container(
+                                      color: Colors.black87,
+                                      child: _buildVideoPreview(),
                                     ),
                                   ),
-                                  Positioned(
-                                    bottom: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Row(
-                                        children: [
-                                          Icon(
-                                            Icons.check_rounded,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Video selected',
-                                            style: TextStyle(
-                                              fontFamily: 'DM Sans',
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
+                                  if (_previewReady && _previewController != null)
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: AnimatedOpacity(
+                                          duration: const Duration(milliseconds: 180),
+                                          opacity: _previewController!.value.isPlaying
+                                              ? 0
+                                              : 1,
+                                          child: Center(
+                                            child: Container(
+                                              width: 58,
+                                              height: 58,
+                                              decoration: BoxDecoration(
+                                                color: Colors.black45,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.play_arrow_rounded,
+                                                size: 34,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
+                                    ),
+                                  Positioned(
+                                    left: 12,
+                                    right: 12,
+                                    bottom: 12,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black54,
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              _video!.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontFamily: 'DM Sans',
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.success,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Row(
+                                            children: [
+                                              Icon(
+                                                Icons.check_rounded,
+                                                size: 14,
+                                                color: Colors.white,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Ready',
+                                                style: TextStyle(
+                                                  fontFamily: 'DM Sans',
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   Positioned(
                                     top: 8,
                                     right: 8,
                                     child: GestureDetector(
-                                      onTap: () =>
-                                          setState(() => _video = null),
+                                      onTap: _clearVideo,
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
@@ -356,10 +462,18 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                             ),
                     ),
                   ),
-
+                  const SizedBox(height: 10),
+                  Text(
+                    _previewReady
+                        ? 'Tap the preview to pause or play before posting.'
+                        : 'Preview loads automatically after you pick a video.',
+                    style: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 11,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
                   const SizedBox(height: 24),
-
-                  // ── Caption ─────────────────────────────────────────────
                   _FieldLabel('Caption'),
                   TextFormField(
                     controller: _captionCtrl,
@@ -370,10 +484,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                       alignLabelWithHint: true,
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // ── Hashtags ────────────────────────────────────────────
                   _FieldLabel('Hashtags'),
                   TextFormField(
                     controller: _hashtagCtrl,
@@ -382,10 +493,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                       prefixIcon: Icon(Icons.tag_rounded, size: 20),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // ── Topic ───────────────────────────────────────────────
                   _FieldLabel('Link to Module / Topic'),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -431,10 +539,7 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
-                  // ── Guidelines ──────────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -445,8 +550,8 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(
                               Icons.info_outline_rounded,
                               size: 16,
@@ -465,14 +570,13 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        _Guideline('Keep content educational and relevant'),
-                        _Guideline('No copyrighted materials'),
-                        _Guideline('Videos must be under 60 seconds'),
-                        _Guideline('Be respectful and constructive'),
+                        const _Guideline('Keep content educational and relevant'),
+                        const _Guideline('No copyrighted materials'),
+                        const _Guideline('Videos must be under 60 seconds'),
+                        const _Guideline('Be respectful and constructive'),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
@@ -571,6 +675,64 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
               const SizedBox(height: 8),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoPreview() {
+    final controller = _previewController;
+    if (_previewReady && controller != null) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio:
+              controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
+          child: VideoPlayer(controller),
+        ),
+      );
+    }
+
+    if (_previewFailed) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.video_library_outlined,
+            size: 44,
+            color: Colors.white70,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _video?.name ?? 'Video selected',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Preview unavailable here, but the file is ready to upload.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 11,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return const Center(
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.4,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
         ),
       ),
     );

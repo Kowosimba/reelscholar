@@ -11,17 +11,10 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
     return Consumer<NavigationProvider>(
       builder: (context, nav, child) {
         return Container(
-          padding: EdgeInsets.fromLTRB(
-            12,
-            8,
-            12,
-            bottomInset == 0 ? 10 : bottomInset + 6,
-          ),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF020617) : Colors.white,
             border: Border(
@@ -43,6 +36,7 @@ class AppBottomNavBar extends StatelessWidget {
           ),
           child: SafeArea(
             top: false,
+            minimum: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
                 Expanded(

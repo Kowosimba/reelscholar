@@ -1,5 +1,3 @@
-// lib/features/profile/screens/edit_profile_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -63,30 +61,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final result = await showModalBottomSheet<ImageSource>(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded),
-              title: const Text('Take photo',
-                  style: TextStyle(fontFamily: 'DM Sans')),
+              title: const Text(
+                'Take photo',
+                style: TextStyle(fontFamily: 'DM Sans'),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('Choose from library',
-                  style: TextStyle(fontFamily: 'DM Sans')),
+              title: const Text(
+                'Choose from library',
+                style: TextStyle(fontFamily: 'DM Sans'),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             if (context.read<ProfileProvider>().profilePicUrl != null)
               ListTile(
-                leading:
-                    const Icon(Icons.delete_rounded, color: AppColors.error),
-                title: const Text('Remove photo',
-                    style: TextStyle(
-                        fontFamily: 'DM Sans', color: AppColors.error)),
+                leading: const Icon(
+                  Icons.delete_rounded,
+                  color: AppColors.error,
+                ),
+                title: const Text(
+                  'Remove photo',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    color: AppColors.error,
+                  ),
+                ),
                 onTap: () => Navigator.pop(context, null),
               ),
           ],
@@ -132,20 +141,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         removeProfilePicture: _removePic,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Profile updated ✅'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated ✅'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -153,13 +166,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textPrimary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -180,7 +194,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primary))
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    )
                   : const Text(
                       'Save',
                       style: TextStyle(
@@ -214,12 +231,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           backgroundImage: _pickedImage != null
                               ? FileImage(_pickedImage!)
                               : (!_removePic && p.profilePicUrl != null
-                                  ? NetworkImage(p.profilePicUrl!)
-                                      as ImageProvider
-                                  : null),
-                          child: (_pickedImage == null &&
-                                  (_removePic ||
-                                      p.profilePicUrl == null))
+                                    ? NetworkImage(p.profilePicUrl!)
+                                          as ImageProvider
+                                    : null),
+                          child:
+                              (_pickedImage == null &&
+                                  (_removePic || p.profilePicUrl == null))
                               ? Text(
                                   p.initials,
                                   style: const TextStyle(
@@ -240,11 +257,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: Colors.white, width: 2),
+                              border: Border.all(color: Colors.white, width: 2),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded,
-                                size: 13, color: Colors.white),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -260,8 +279,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   maxLength: 255,
                   decoration: const InputDecoration(
                     hintText: 'Your full name',
-                    prefixIcon:
-                        Icon(Icons.person_outline_rounded, size: 20),
+                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                     counterText: '',
                   ),
                   validator: (v) =>
@@ -295,8 +313,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     controller: _studentIdCtrl,
                     decoration: const InputDecoration(
                       hintText: 'C210123001A',
-                      prefixIcon:
-                          Icon(Icons.badge_outlined, size: 20),
+                      prefixIcon: Icon(Icons.badge_outlined, size: 20),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
@@ -347,8 +364,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   programmes: p.programmes,
                   loading: p.programmesLoading,
                   enabled: _selectedFaculty != null,
-                  onChanged: (val) =>
-                      setState(() => _selectedProgramme = val),
+                  onChanged: (val) => setState(() => _selectedProgramme = val),
                 ),
                 const SizedBox(height: 14),
 
@@ -363,22 +379,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           DropdownButtonFormField<int>(
                             initialValue: _selectedYear,
                             decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12)),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
                             items: List.generate(
                               6,
                               (i) => DropdownMenuItem(
                                 value: i + 1,
-                                child: Text('Year ${i + 1}',
-                                    style: const TextStyle(
-                                        fontFamily: 'DM Sans',
-                                        fontSize: 13)),
+                                child: Text(
+                                  'Year ${i + 1}',
+                                  style: const TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ),
                             ),
-                            onChanged: (v) =>
-                                setState(() => _selectedYear = v),
-                            validator: (v) =>
-                                v == null ? 'Required' : null,
+                            onChanged: (v) => setState(() => _selectedYear = v),
+                            validator: (v) => v == null ? 'Required' : null,
                           ),
                         ],
                       ),
@@ -392,21 +412,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           DropdownButtonFormField<int>(
                             initialValue: _selectedSemester,
                             decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12)),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
                             items: [1, 2, 3]
-                                .map((s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text('Sem $s',
-                                          style: const TextStyle(
-                                              fontFamily: 'DM Sans',
-                                              fontSize: 13)),
-                                    ))
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(
+                                      'Sem $s',
+                                      style: const TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (v) =>
                                 setState(() => _selectedSemester = v),
-                            validator: (v) =>
-                                v == null ? 'Required' : null,
+                            validator: (v) => v == null ? 'Required' : null,
                           ),
                         ],
                       ),
@@ -425,7 +452,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white))
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Text(
                             'Save Changes',
                             style: TextStyle(
@@ -458,18 +488,24 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Text(text,
-              style: const TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary)),
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
           if (required)
-            const Text(' *',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.error,
-                    fontWeight: FontWeight.w700)),
+            const Text(
+              ' *',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
         ],
       ),
     );
@@ -503,7 +539,9 @@ class _FacultyDropdown extends StatelessWidget {
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
-                strokeWidth: 2, color: AppColors.primary),
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
           ),
         ),
       );
@@ -511,23 +549,28 @@ class _FacultyDropdown extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       decoration: const InputDecoration(
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       isExpanded: true,
-      hint: const Text('Select faculty',
-          style: TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 13,
-              color: AppColors.textTertiary)),
+      hint: const Text(
+        'Select faculty',
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: 13,
+          color: AppColors.textTertiary,
+        ),
+      ),
       items: faculties
-          .map((f) => DropdownMenuItem(
-                value: f,
-                child: Text(f,
-                    style: const TextStyle(
-                        fontFamily: 'DM Sans', fontSize: 12),
-                    overflow: TextOverflow.ellipsis),
-              ))
+          .map(
+            (f) => DropdownMenuItem(
+              value: f,
+              child: Text(
+                f,
+                style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
       validator: (v) => v == null ? 'Please select your faculty' : null,
@@ -564,7 +607,9 @@ class _ProgrammeDropdown extends StatelessWidget {
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
-                strokeWidth: 2, color: AppColors.primary),
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
           ),
         ),
       );
@@ -572,34 +617,40 @@ class _ProgrammeDropdown extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: programmes.contains(value) ? value : null,
       decoration: InputDecoration(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        fillColor:
-            !enabled ? const Color(0xFFF8FAFC) : null,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        fillColor: !enabled ? const Color(0xFFF8FAFC) : null,
         filled: !enabled,
       ),
       isExpanded: true,
       hint: Text(
-          enabled ? 'Select programme' : 'Select a faculty first',
-          style: const TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 13,
-              color: AppColors.textTertiary)),
+        enabled ? 'Select programme' : 'Select a faculty first',
+        style: const TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: 13,
+          color: AppColors.textTertiary,
+        ),
+      ),
       items: enabled
           ? programmes
-              .map((prog) => DropdownMenuItem(
+                .map(
+                  (prog) => DropdownMenuItem(
                     value: prog,
-                    child: Text(prog,
-                        style: const TextStyle(
-                            fontFamily: 'DM Sans', fontSize: 12),
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList()
+                    child: Text(
+                      prog,
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList()
           : [],
       onChanged: enabled ? onChanged : null,
     );
   }
 }
-
-
-

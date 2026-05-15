@@ -1,237 +1,194 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
+import 'package:reelscholar/providers/theme_provider.dart';
 import 'package:reelscholar/providers/app_colors.dart';
 
-/// Dark glass-style drawer aligned with the floating bottom nav aesthetic.
 class AppDrawer extends StatelessWidget {
   final DrawerUser? user;
-  final bool isDarkMode;
-  final VoidCallback onDarkModeToggle;
   final VoidCallback onSignOut;
 
   const AppDrawer({
     super.key,
     this.user,
-    required this.isDarkMode,
-    required this.onDarkModeToggle,
     required this.onSignOut,
   });
 
-  static const Color _bg = Color(0xFF050814);
-  static const Color _surface = Color(0xFF0F1629);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _label = Color(0xFF94A3B8);
-
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.watch<ThemeProvider>();
+    final nav = context.watch<NavigationProvider>();
+    
+    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final labelColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return Drawer(
-      width: 304,
-      backgroundColor: _bg,
+      backgroundColor: bgColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
+        borderRadius: BorderRadius.zero,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _DrawerHeroHeader(
-            topPadding: top,
-            user: user,
-            onClose: () => Navigator.pop(context),
-          ),
+          // Header
+          _DrawerHeader(user: user, isDark: isDark),
+          
           Expanded(
-            child: Consumer<NavigationProvider>(
-              builder: (_, nav, _) {
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                  children: [
-                    _section('Navigate'),
-                    _DrawerNavTile(
-                      icon: Icons.home_outlined,
-                      label: 'Home',
-                      active: nav.currentIndex == 0,
-                      onTap: () => _goTab(context, nav, 0),
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'Chats',
-                      active: nav.currentIndex == 1,
-                      badge: nav.unreadChats,
-                      onTap: () => _goTab(context, nav, 1),
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.groups_outlined,
-                      label: 'Study Groups',
-                      active: nav.currentIndex == 2,
-                      onTap: () => _goTab(context, nav, 2),
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.psychology_outlined,
-                      label: 'Learn',
-                      active: nav.currentIndex == 3,
-                      onTap: () => _goTab(context, nav, 3),
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.person_outline_rounded,
-                      label: 'Me',
-                      active: nav.currentIndex == 4,
-                      onTap: () => _goTab(context, nav, 4),
-                    ),
-                    _divider(),
-                    _section('Explore'),
-                    _DrawerNavTile(
-                      icon: Icons.search_rounded,
-                      label: 'Search reels',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/search-reels');
-                      },
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.bookmark_outline_rounded,
-                      label: 'Saved',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/bookmarks');
-                      },
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.notifications_outlined,
-                      label: 'Notifications',
-                      badge: nav.unreadNotifications,
-                      onTap: () {
-                        Navigator.pop(context);
-                        nav.clearNotificationBadge();
-                        Navigator.pushNamed(context, '/notifications');
-                      },
-                    ),
-                    _divider(),
-                    _section('Community'),
-                    _DrawerNavTile(
-                      icon: Icons.emoji_events_outlined,
-                      label: 'Hackathons',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/hackathons');
-                      },
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.leaderboard_outlined,
-                      label: 'Leaderboard',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/leaderboard');
-                      },
-                    ),
-                    _divider(),
-                    _section('Progress'),
-                    _DrawerNavTile(
-                      icon: Icons.insights_outlined,
-                      label: 'Stats & XP',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/progress');
-                      },
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.military_tech_outlined,
-                      label: 'Achievements',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/achievements');
-                      },
-                    ),
-                    _divider(),
-                    _section('Account'),
-                    _DrawerNavTile(
-                      icon: Icons.settings_outlined,
-                      label: 'Settings',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/settings');
-                      },
-                    ),
-                    _DrawerNavTile(
-                      icon: Icons.lock_outline_rounded,
-                      label: 'Change password',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/change-password');
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                    _DarkModeRow(
-                      isDark: isDarkMode,
-                      onToggle: onDarkModeToggle,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
-                Container(
-                  height: 1,
-                  color: Colors.white.withValues(alpha: 0.06),
+                _SectionLabel('Main', color: labelColor),
+                _DrawerTile(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Home',
+                  isSelected: nav.currentIndex == 0,
+                  onTap: () => _goTab(context, nav, 0),
+                  isDark: isDark,
                 ),
-                const SizedBox(height: 10),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onSignOut,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Ink(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.45),
-                        ),
-                        color: AppColors.error.withValues(alpha: 0.08),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.logout_rounded,
-                            color: AppColors.error.withValues(alpha: 0.95),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Sign out',
-                            style: TextStyle(
-                              fontFamily: AppFonts.dmSans,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.error.withValues(alpha: 0.95),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                _DrawerTile(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  activeIcon: Icons.chat_bubble_rounded,
+                  label: 'Chats',
+                  isSelected: nav.currentIndex == 1,
+                  badge: nav.unreadChats,
+                  onTap: () => _goTab(context, nav, 1),
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.groups_outlined,
+                  activeIcon: Icons.groups_rounded,
+                  label: 'Study Groups',
+                  isSelected: nav.currentIndex == 2,
+                  onTap: () => _goTab(context, nav, 2),
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.psychology_outlined,
+                  activeIcon: Icons.psychology_rounded,
+                  label: 'Learning Hub',
+                  isSelected: nav.currentIndex == 3,
+                  onTap: () => _goTab(context, nav, 3),
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.person_outline_rounded,
+                  activeIcon: Icons.person_rounded,
+                  label: 'My Profile',
+                  isSelected: nav.currentIndex == 4,
+                  onTap: () => _goTab(context, nav, 4),
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.notifications_none_rounded,
+                  activeIcon: Icons.notifications_rounded,
+                  label: 'Notifications',
+                  badge: nav.unreadNotifications,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/notifications');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.emoji_events_outlined,
+                  activeIcon: Icons.emoji_events_rounded,
+                  label: 'Hackathons',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/hackathons');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.bookmark_border_rounded,
+                  activeIcon: Icons.bookmark_rounded,
+                  label: 'Saved Reels',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/bookmarks');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.person_search_outlined,
+                  label: 'Find People',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/search-users');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.add_circle_outline_rounded,
+                  label: 'Upload Reel',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/upload-reel');
+                  },
+                  isDark: isDark,
+                ),
+
+                const Divider(height: 32, thickness: 0.5),
+
+                _SectionLabel('Settings', color: labelColor),
+                _DrawerTile(
+                  icon: Icons.settings_outlined,
+                  label: 'App Settings',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/settings');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  label: isDark ? 'Light Mode' : 'Dark Mode',
+                  onTap: () => theme.toggleTheme(),
+                  isDark: isDark,
+                  trailing: Switch.adaptive(
+                    value: isDark,
+                    onChanged: (_) => theme.toggleTheme(),
+                    activeTrackColor: AppColors.primary,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'ReelScholar v1.0.0',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppFonts.dmSans,
-                    fontSize: 10,
-                    color: _muted.withValues(alpha: 0.85),
-                    letterSpacing: 0.3,
-                  ),
+                _DrawerTile(
+                  icon: Icons.help_outline_rounded,
+                  label: 'Help & Feedback',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/settings');
+                  },
+                  isDark: isDark,
                 ),
               ],
+            ),
+          ),
+          
+          // Sign Out
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _DrawerTile(
+              icon: Icons.logout_rounded,
+              label: 'Sign Out',
+              color: AppColors.error,
+              onTap: onSignOut,
+              isDark: isDark,
+            ),
+          ),
+          
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'ReelScholar v1.0.0',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: labelColor,
+                  fontFamily: AppFonts.dmSans,
+                ),
+              ),
             ),
           ),
         ],
@@ -243,247 +200,94 @@ class AppDrawer extends StatelessWidget {
     Navigator.pop(context);
     nav.setTab(index);
   }
+}
 
-  Widget _section(String title) {
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _SectionLabel(this.text, {required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 14, 8, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          fontFamily: AppFonts.dmSans,
-          fontSize: 10,
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
           fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: _label,
+          color: color,
+          letterSpacing: 1.1,
+          fontFamily: AppFonts.dmSans,
         ),
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        color: Colors.white.withValues(alpha: 0.06),
       ),
     );
   }
 }
 
-class _DrawerHeroHeader extends StatelessWidget {
-  final double topPadding;
+class _DrawerHeader extends StatelessWidget {
   final DrawerUser? user;
-  final VoidCallback onClose;
+  final bool isDark;
 
-  const _DrawerHeroHeader({
-    required this.topPadding,
-    this.user,
-    required this.onClose,
-  });
+  const _DrawerHeader({this.user, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topPadding + 12, 20, 22),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF0D9488).withValues(alpha: 0.35),
-            AppDrawer._surface,
-            AppDrawer._bg,
-          ],
-          stops: const [0.0, 0.35, 1.0],
-        ),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
-        ),
-      ),
+      padding: EdgeInsets.fromLTRB(20, top + 20, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                'Menu',
-                style: TextStyle(
-                  fontFamily: AppFonts.sora,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  letterSpacing: 0.8,
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    width: 1,
+                  ),
+                ),
+                child: ClipOval(
+                  child: user?.profilePicUrl != null
+                      ? Image.network(
+                          user!.profilePicUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, e, _) => _InitialsAvatar(
+                            initials: user?.initials ?? '?',
+                          ),
+                        )
+                      : _InitialsAvatar(initials: user?.initials ?? '?'),
                 ),
               ),
               const Spacer(),
-              Material(
-                color: Colors.white.withValues(alpha: 0.08),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onClose,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(
-                      Icons.close_rounded,
-                      color: Colors.white.withValues(alpha: 0.85),
-                      size: 20,
-                    ),
-                  ),
-                ),
+              Image(
+                image: const AssetImage('assets/images/logo_small.png'),
+                width: 28,
+                height: 28,
+                errorBuilder: (_, _, _) => const Icon(Icons.school_rounded, color: AppColors.primary),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.fabGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppDrawer._bg,
-                  ),
-                  padding: const EdgeInsets.all(3),
-                  child: ClipOval(
-                    child: user?.profilePicUrl != null
-                        ? Image.network(
-                            user!.profilePicUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => _InitialsAvatar(
-                              initials: user?.initials ?? '?',
-                            ),
-                          )
-                        : _InitialsAvatar(initials: user?.initials ?? '?'),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.fullName ?? 'ReelScholar',
-                      style: const TextStyle(
-                        fontFamily: AppFonts.sora,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1.15,
-                      ),
-                    ),
-                    if (user?.programme != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        user!.programme!,
-                        style: TextStyle(
-                          fontFamily: AppFonts.dmSans,
-                          fontSize: 12,
-                          height: 1.3,
-                          color: AppDrawer._label,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MiniChip(
-                          icon: Icons.bolt_rounded,
-                          label: user != null ? _fmtXp(user!.totalXp) : '0 XP',
-                        ),
-                        _MiniChip(
-                          icon: Icons.local_fire_department_outlined,
-                          label: '${user?.currentStreak ?? 0} streak',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _fmtXp(int xp) {
-    if (xp >= 1000) return '${(xp / 1000).toStringAsFixed(1)}k XP';
-    return '$xp XP';
-  }
-}
-
-class _InitialsAvatar extends StatelessWidget {
-  final String initials;
-
-  const _InitialsAvatar({required this.initials});
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppDrawer._surface,
-      child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            fontFamily: AppFonts.sora,
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _MiniChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFF5EEAD4)),
-          const SizedBox(width: 5),
+          const SizedBox(height: 16),
           Text(
-            label,
-            style: const TextStyle(
+            user?.fullName ?? 'Welcome Back',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              fontFamily: AppFonts.sora,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
+            ),
+          ),
+          Text(
+            user?.programme ?? 'Learning account',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white60 : Colors.black54,
               fontFamily: AppFonts.dmSans,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
             ),
           ),
         ],
@@ -492,100 +296,90 @@ class _MiniChip extends StatelessWidget {
   }
 }
 
-class _DrawerNavTile extends StatelessWidget {
+class _DrawerTile extends StatelessWidget {
   final IconData icon;
+  final IconData? activeIcon;
   final String label;
-  final bool active;
+  final bool isSelected;
   final int badge;
   final VoidCallback onTap;
+  final Color? color;
+  final Widget? trailing;
+  final bool isDark;
 
-  const _DrawerNavTile({
+  const _DrawerTile({
     required this.icon,
+    this.activeIcon,
     required this.label,
-    this.active = false,
+    this.isSelected = false,
     this.badge = 0,
     required this.onTap,
+    this.color,
+    this.trailing,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = color ?? AppColors.primary;
+    final inactiveColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final finalIconColor = isSelected ? activeColor : (color ?? inactiveColor);
+    final finalTextColor = isSelected ? activeColor : (color ?? (isDark ? Colors.white : const Color(0xFF1E293B)));
+    
+    final bg = isSelected 
+      ? activeColor.withValues(alpha: isDark ? 0.15 : 0.08) 
+      : Colors.transparent;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: AppColors.primary.withValues(alpha: 0.12),
-          child: Ink(
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: active
-                    ? Colors.white.withValues(alpha: 0.14)
-                    : Colors.transparent,
-              ),
-              gradient: active
-                  ? LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.22),
-                        AppColors.secondary.withValues(alpha: 0.12),
-                        Colors.transparent,
-                      ],
-                    )
-                  : null,
-              color: active ? null : Colors.white.withValues(alpha: 0.03),
+              color: bg,
+              borderRadius: BorderRadius.circular(99),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 Icon(
-                  icon,
+                  isSelected ? (activeIcon ?? icon) : icon,
                   size: 22,
-                  color: active ? Colors.white : AppDrawer._label,
+                  color: finalIconColor,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: finalTextColor,
                       fontFamily: AppFonts.dmSans,
-                      fontSize: 14.5,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                      color: active ? Colors.white : const Color(0xFFE2E8F0),
                     ),
                   ),
                 ),
                 if (badge > 0)
                   Container(
-                    constraints: const BoxConstraints(minWidth: 20),
-                    height: 20,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      gradient: AppColors.fabGradient,
+                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Center(
-                      child: Text(
-                        badge > 99 ? '99+' : '$badge',
-                        style: const TextStyle(
-                          fontFamily: AppFonts.dmSans,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                    child: Text(
+                      badge > 99 ? '99+' : '$badge',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white70 : Colors.black54,
                       ),
                     ),
                   ),
-                if (active)
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: Colors.white.withValues(alpha: 0.35),
-                  ),
+                ?trailing,
               ],
             ),
           ),
@@ -595,95 +389,14 @@ class _DrawerNavTile extends StatelessWidget {
   }
 }
 
-class _DarkModeRow extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onToggle;
-
-  const _DarkModeRow({required this.isDark, required this.onToggle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onToggle,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.white.withValues(alpha: 0.03),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 22,
-                color: AppDrawer._label,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  isDark ? 'Light appearance' : 'Dark appearance',
-                  style: const TextStyle(
-                    fontFamily: AppFonts.dmSans,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFE2E8F0),
-                  ),
-                ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 44,
-                height: 24,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: isDark ? AppColors.fabGradient : null,
-                  color: isDark ? null : Colors.white.withValues(alpha: 0.12),
-                ),
-                child: AnimatedAlign(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOut,
-                  alignment: isDark
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DrawerUser {
+class DrawerUser {
   final String fullName;
   final String? profilePicUrl;
   final String? programme;
   final int totalXp;
   final int currentStreak;
 
-  const _DrawerUser({
+  const DrawerUser({
     required this.fullName,
     this.profilePicUrl,
     this.programme,
@@ -700,13 +413,24 @@ class _DrawerUser {
   }
 }
 
-/// Pass from [AuthProvider] / profile when wired.
-class DrawerUser extends _DrawerUser {
-  const DrawerUser({
-    required super.fullName,
-    super.profilePicUrl,
-    super.programme,
-    required super.totalXp,
-    required super.currentStreak,
-  });
+class _InitialsAvatar extends StatelessWidget {
+  final String initials;
+  const _InitialsAvatar({required this.initials});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
 }

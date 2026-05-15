@@ -40,6 +40,23 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
     });
   }
 
+  Future<void> _refreshSession(TutorProvider prov) async {
+    if (prov.isStarting || prov.isSending) return;
+    final ok = await prov.startSession(widget.module);
+    if (!mounted) return;
+    if (ok) {
+      _scrollToBottom();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(prov.chatError ?? 'Could not refresh session'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: TColors.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageCtrl.text.trim();
     if (text.isEmpty) return;
@@ -95,6 +112,50 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
             ),
           ],
         ),
+        actions: [
+          Consumer<TutorProvider>(
+            builder: (_, prov, _) => PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_vert_rounded,
+                color: TColors.textSecondary,
+              ),
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (v) async {
+                if (v == 'refresh') await _refreshSession(prov);
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'refresh',
+                  enabled: !prov.isStarting && !prov.isSending,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.refresh_rounded,
+                        size: 18,
+                        color: prov.isStarting || prov.isSending
+                            ? TColors.textTertiary
+                            : TColors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Refresh Session',
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          color: prov.isStarting || prov.isSending
+                              ? TColors.textTertiary
+                              : TColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: Consumer<TutorProvider>(
         builder: (context, prov, _) {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/models/messaging_models.dart';
 import 'package:reelscholar/providers/messaging_provider.dart';
+import 'package:reelscholar/screens/chats/chat_user_search_screen.dart';
 import 'package:reelscholar/screens/messaging/chat_thread_screen.dart';
 import 'package:reelscholar/screens/messaging/message_requests_screen.dart';
 
@@ -13,17 +14,13 @@ class ChatsScreen extends StatefulWidget {
   State<ChatsScreen> createState() => _ChatsScreenState();
 }
 
-class _ChatsScreenState extends State<ChatsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabCtrl;
+class _ChatsScreenState extends State<ChatsScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
-    _tabCtrl.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final m = context.read<MessagingProvider>();
       m.loadConversations(refresh: true);
@@ -33,7 +30,6 @@ class _ChatsScreenState extends State<ChatsScreen>
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -41,7 +37,6 @@ class _ChatsScreenState extends State<ChatsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -49,47 +44,143 @@ class _ChatsScreenState extends State<ChatsScreen>
             ctrl: _searchCtrl,
             onChanged: (q) => setState(() => _searchQuery = q),
           ),
-          _TabBar(ctrl: _tabCtrl),
-          const Divider(color: AppColors.border, height: 1),
-          Expanded(
-            child: TabBarView(
-              controller: _tabCtrl,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(
               children: [
-                _ChatsListTab(
-                  searchQuery: _searchQuery,
-                  filter: (c) => c.isGroup,
-                  emptyTitle: 'No study groups yet',
-                  emptySubtitle: 'Join or create a study group to collaborate',
-                ),
-                _ChatsListTab(
-                  searchQuery: _searchQuery,
-                  filter: (c) => c.isDirect,
-                  emptyTitle: 'No messages yet',
-                  emptySubtitle: 'Message a classmate to start a conversation',
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _openPeopleSearch,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySubtle.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person_search_rounded,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Find people to follow or message',
+                              style: TextStyle(
+                                fontFamily: AppFonts.dmSans,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textTertiary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+          const Divider(color: AppColors.border, height: 1),
+          Expanded(
+            child: Consumer<MessagingProvider>(
+              builder: (_, p, _) {
+                if (p.convsLoading && p.conversations.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+                if (p.convsError != null && p.conversations.isEmpty) {
+                  return _EmptyState(
+                    icon: Icons.error_outline_rounded,
+                    title: 'Could not load messages',
+                    subtitle: p.convsError!,
+                    actionLabel: 'Retry',
+                    onAction: () => p.loadConversations(refresh: true),
+                  );
+                }
+                var list = p.conversations.where((c) => c.isDirect).toList();
+                if (_searchQuery.isNotEmpty) {
+                  final q = _searchQuery.toLowerCase();
+                  list = list
+                      .where((c) => c.displayName.toLowerCase().contains(q))
+                      .toList();
+                }
+                if (list.isEmpty) {
+                  return _EmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: _searchQuery.isNotEmpty
+                        ? 'No matching messages'
+                        : 'No direct messages yet',
+                    subtitle: _searchQuery.isNotEmpty
+                        ? 'Try a different name'
+                        : 'Search for people, follow them, and send a message request to start chatting.',
+                    actionLabel: _searchQuery.isEmpty ? 'Find People' : null,
+                    onAction: _searchQuery.isEmpty ? _openPeopleSearch : null,
+                  );
+                }
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () => p.loadConversations(refresh: true),
+                  child: ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final c = list[i];
+                      return _ConversationTile(
+                        conv: c,
+                        onTap: () => Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => ChatThreadScreen(conversationId: c.id),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
-      floatingActionButton: _ComposeFAB(
-        tabIndex: _tabCtrl.index,
-        onTap: _compose,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openPeopleSearch,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.edit_rounded, size: 20),
+        label: const Text(
+          'New Message',
+          style: TextStyle(
+            fontFamily: AppFonts.dmSans,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.white,
       elevation: 0,
-      title: const Text(
-        'Chats',
+      title: Text(
+        'Messages',
         style: TextStyle(
           fontFamily: AppFonts.sora,
           fontSize: 22,
           fontWeight: FontWeight.w900,
-          color: AppColors.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       actions: [
@@ -98,8 +189,11 @@ class _ChatsScreenState extends State<ChatsScreen>
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.inbox_outlined,
-                    color: AppColors.textSecondary, size: 22),
+                icon: Icon(
+                  Icons.inbox_outlined,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+                  size: 22,
+                ),
                 onPressed: () => Navigator.push<void>(
                   context,
                   MaterialPageRoute<void>(
@@ -134,104 +228,23 @@ class _ChatsScreenState extends State<ChatsScreen>
           ),
         ),
         IconButton(
-          icon: const Icon(
-            Icons.edit_rounded,
-            color: AppColors.textSecondary,
+          icon: Icon(
+            Icons.person_add_alt_1_rounded,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
             size: 22,
           ),
-          onPressed: _compose,
+          onPressed: _openPeopleSearch,
         ),
       ],
     );
   }
 
-  void _compose() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ComposeSheet(isGroup: _tabCtrl.index == 0),
+  void _openPeopleSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatUserSearchScreen()),
     );
   }
-}
-
-class _ChatsListTab extends StatelessWidget {
-  final String searchQuery;
-  final bool Function(Conversation c) filter;
-  final String emptyTitle;
-  final String emptySubtitle;
-
-  const _ChatsListTab({
-    required this.searchQuery,
-    required this.filter,
-    required this.emptyTitle,
-    required this.emptySubtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<MessagingProvider>(
-      builder: (_, p, _) {
-        if (p.convsLoading && p.conversations.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-        if (p.convsError != null && p.conversations.isEmpty) {
-          return _EmptyState(
-            icon: Icons.error_outline_rounded,
-            title: 'Could not load chats',
-            subtitle: p.convsError!,
-            actionLabel: 'Retry',
-            onAction: () => p.loadConversations(refresh: true),
-          );
-        }
-        var list = p.conversations.where(filter).toList();
-        if (searchQuery.isNotEmpty) {
-          final q = searchQuery.toLowerCase();
-          list = list
-              .where((c) => c.displayName.toLowerCase().contains(q))
-              .toList();
-        }
-        if (list.isEmpty) {
-          return _EmptyState(
-            icon: _tabIcon(),
-            title: searchQuery.isNotEmpty ? 'No results' : emptyTitle,
-            subtitle: searchQuery.isNotEmpty
-                ? 'Nothing matches "$searchQuery"'
-                : emptySubtitle,
-            actionLabel: searchQuery.isEmpty ? 'Refresh' : null,
-            onAction: searchQuery.isEmpty
-                ? () => p.loadConversations(refresh: true)
-                : null,
-          );
-        }
-        return RefreshIndicator(
-          color: AppColors.primary,
-          onRefresh: () => p.loadConversations(refresh: true),
-          child: ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (_, i) {
-              final c = list[i];
-              return _ConversationTile(
-                conv: c,
-                onTap: () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => ChatThreadScreen(conversationId: c.id),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  IconData _tabIcon() =>
-      emptyTitle.contains('group')
-          ? Icons.group_outlined
-          : Icons.chat_bubble_outline_rounded;
 }
 
 class _SearchBar extends StatelessWidget {
@@ -243,11 +256,13 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: AppColors.muted,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E293B)
+              : AppColors.muted,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -262,13 +277,13 @@ class _SearchBar extends StatelessWidget {
               child: TextField(
                 controller: ctrl,
                 onChanged: onChanged,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppFonts.dmSans,
                   fontSize: 14,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 decoration: const InputDecoration(
-                  hintText: 'Search conversations…',
+                  hintText: 'Search direct messages…',
                   hintStyle: TextStyle(
                     fontFamily: AppFonts.dmSans,
                     fontSize: 14,
@@ -283,37 +298,6 @@ class _SearchBar extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TabBar extends StatelessWidget {
-  final TabController ctrl;
-
-  const _TabBar({required this.ctrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return TabBar(
-      controller: ctrl,
-      indicatorColor: AppColors.primary,
-      indicatorWeight: 2.5,
-      labelStyle: const TextStyle(
-        fontFamily: AppFonts.sora,
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-      ),
-      unselectedLabelStyle: const TextStyle(
-        fontFamily: AppFonts.dmSans,
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-      ),
-      labelColor: AppColors.primary,
-      unselectedLabelColor: AppColors.textTertiary,
-      tabs: const [
-        Tab(text: 'Study Groups'),
-        Tab(text: 'Messages'),
-      ],
     );
   }
 }
@@ -345,64 +329,40 @@ class _ConversationTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: unread > 0
               ? AppColors.primarySubtle.withValues(alpha: 0.35)
-              : AppColors.white,
+              : Colors.transparent,
           border: const Border(
             bottom: BorderSide(color: AppColors.border, width: 1),
           ),
         ),
         child: Row(
           children: [
-            Stack(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: _avatarGradient(conv.displayName),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: conv.avatarUrl != null &&
-                            conv.avatarUrl!.isNotEmpty
-                        ? ClipOval(
-                            child: Image.network(
-                              conv.avatarUrl!,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Text(
-                            conv.displayInitials,
-                            style: const TextStyle(
-                              fontFamily: AppFonts.sora,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-                if (conv.isGroup)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: AppColors.secondary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: _avatarGradient(conv.displayName),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: conv.avatarUrl != null && conv.avatarUrl!.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          conv.avatarUrl!,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Text(
+                        conv.displayInitials,
+                        style: const TextStyle(
+                          fontFamily: AppFonts.sora,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.group_rounded,
-                        size: 9,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -417,10 +377,9 @@ class _ConversationTile extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: AppFonts.sora,
                             fontSize: 14,
-                            fontWeight: unread > 0
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color: AppColors.textPrimary,
+                            fontWeight:
+                                unread > 0 ? FontWeight.w800 : FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -433,9 +392,8 @@ class _ConversationTile extends StatelessWidget {
                           color: unread > 0
                               ? AppColors.primary
                               : AppColors.textTertiary,
-                          fontWeight: unread > 0
-                              ? FontWeight.w700
-                              : FontWeight.w400,
+                          fontWeight:
+                              unread > 0 ? FontWeight.w700 : FontWeight.w400,
                         ),
                       ),
                     ],
@@ -446,8 +404,11 @@ class _ConversationTile extends StatelessWidget {
                       if (conv.isMuted)
                         const Padding(
                           padding: EdgeInsets.only(right: 4),
-                          child: Icon(Icons.volume_off_rounded,
-                              size: 12, color: AppColors.textTertiary),
+                          child: Icon(
+                            Icons.volume_off_rounded,
+                            size: 12,
+                            color: AppColors.textTertiary,
+                          ),
                         ),
                       Expanded(
                         child: Text(
@@ -456,11 +417,10 @@ class _ConversationTile extends StatelessWidget {
                             fontFamily: AppFonts.dmSans,
                             fontSize: 13,
                             color: unread > 0
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                            fontWeight: unread > 0
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            fontWeight:
+                                unread > 0 ? FontWeight.w600 : FontWeight.w400,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -511,127 +471,6 @@ class _ConversationTile extends StatelessWidget {
   }
 }
 
-class _ComposeFAB extends StatelessWidget {
-  final int tabIndex;
-  final VoidCallback onTap;
-
-  const _ComposeFAB({required this.tabIndex, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      onPressed: onTap,
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      icon: Icon(
-        tabIndex == 0 ? Icons.group_add_rounded : Icons.edit_rounded,
-        size: 20,
-      ),
-      label: Text(
-        tabIndex == 0 ? 'New Group' : 'New Message',
-        style: const TextStyle(
-          fontFamily: AppFonts.dmSans,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _ComposeSheet extends StatelessWidget {
-  final bool isGroup;
-
-  const _ComposeSheet({required this.isGroup});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.45,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Text(
-                  isGroup ? 'Create Study Group' : 'New Message',
-                  style: const TextStyle(
-                    fontFamily: AppFonts.sora,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const Icon(Icons.person_search_rounded,
-                color: AppColors.primary),
-            title: const Text(
-              'Find people',
-              style: TextStyle(
-                fontFamily: AppFonts.dmSans,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            subtitle: Text(
-              isGroup
-                  ? 'Add members from search (coming soon)'
-                  : 'Search users to send a message request',
-              style: const TextStyle(
-                fontFamily: AppFonts.dmSans,
-                fontSize: 12,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Use search from your profile area to find people. Message requests open from the inbox icon.',
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -668,21 +507,21 @@ class _EmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: AppFonts.sora,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: AppFonts.dmSans,
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
                 height: 1.5,
               ),
             ),
@@ -690,20 +529,7 @@ class _EmptyState extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: onAction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  actionLabel!,
-                  style: const TextStyle(
-                    fontFamily: AppFonts.dmSans,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: Text(actionLabel!),
               ),
             ],
           ],

@@ -110,9 +110,7 @@ class _MessageRequestDetailScreenState
     final h = name.codeUnits.fold(0, (a, b) => a + b) % 360;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
+import 'package:video_player/video_player.dart';
 import 'reel_widgets.dart';
 import '../comments_sheet.dart';
 
@@ -26,11 +27,12 @@ class ReelPlayerItem extends StatefulWidget {
 
 class _ReelPlayerItemState extends State<ReelPlayerItem>
     with SingleTickerProviderStateMixin {
-  late AnimationController _heartCtrl;
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  AnimationController? _heartCtrl;
   bool _showHeart = false;
   double _videoProgress = 0.0;
   bool _isPlaying = true;
-  int _secondsWatched = 0;
 
   @override
   void initState() {
@@ -39,57 +41,63 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    _initController();
+    if (widget.isActive) _startPlayback();
+  }
 
-    // Simulate video playback progress when active
-    if (widget.isActive) _startProgress();
+  Future<void> _initController() async {
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.reel.videoUrl));
+    
+    try {
+      await _controller!.initialize();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+        _controller!.setLooping(true);
+        if (widget.isActive) {
+          _controller!.play();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error initializing video player: $e');
+    }
+
+    _controller!.addListener(() {
+      if (mounted) {
+        setState(() {
+          _videoProgress = _controller!.value.position.inMilliseconds / 
+                          _controller!.value.duration.inMilliseconds;
+        });
+      }
+    });
   }
 
   @override
   void didUpdateWidget(ReelPlayerItem old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      _startProgress();
+      _startPlayback();
       _recordView();
     } else if (!widget.isActive && old.isActive) {
-      _stopProgress();
+      _stopPlayback();
     }
   }
 
-  void _startProgress() {
-    setState(() {
-      _isPlaying = true;
-      _videoProgress = 0;
-      _secondsWatched = 0;
-    });
-    _tickProgress();
+  void _startPlayback() {
+    setState(() => _isPlaying = true);
+    _controller?.play();
   }
 
-  void _stopProgress() {
+  void _stopPlayback() {
     setState(() => _isPlaying = false);
-  }
-
-  void _tickProgress() async {
-    if (!mounted || !widget.isActive || !_isPlaying) return;
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted || !widget.isActive || !_isPlaying) return;
-    final total = widget.reel.duration ?? 60;
-    setState(() {
-      _secondsWatched++;
-      _videoProgress = (_secondsWatched / total).clamp(0.0, 1.0);
-    });
-    if (_videoProgress < 1.0) {
-      _tickProgress();
-    } else {
-      // Loop
-      await Future.delayed(const Duration(milliseconds: 800));
-      _startProgress();
-    }
+    _controller?.pause();
   }
 
   void _recordView() {
     context.read<ReelProvider>().recordView(
       widget.reel.id,
-      watchSeconds: _secondsWatched,
+      watchSeconds: _controller?.value.position.inSeconds ?? 0,
     );
   }
 
@@ -99,15 +107,19 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
   }
 
   void _showHeartAnimation() {
+    if (_heartCtrl == null) return;
     setState(() => _showHeart = true);
-    _heartCtrl.forward(from: 0).then((_) {
+    _heartCtrl!.forward(from: 0).then((_) {
       if (mounted) setState(() => _showHeart = false);
     });
   }
 
   void _togglePlay() {
-    setState(() => _isPlaying = !_isPlaying);
-    if (_isPlaying) _tickProgress();
+    if (_isPlaying) {
+      _stopPlayback();
+    } else {
+      _startPlayback();
+    }
   }
 
   void _openComments() {
@@ -131,7 +143,8 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
 
   @override
   void dispose() {
-    _heartCtrl.dispose();
+    _heartCtrl?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -149,47 +162,43 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // ── Video background ────────────────────────────────────────
-              _VideoBackground(thumbnailUrl: reel.thumbnailUrl),
+              // Full-screen video player
+              Positioned.fill(
+                child: _isInitialized
+                    ? FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _controller!.value.size.width,
+                          height: _controller!.value.size.height,
+                          child: VideoPlayer(_controller!),
+                        ),
+                      )
+                    : _VideoBackground(thumbnailUrl: reel.thumbnailUrl),
+              ),
 
-              // ── Top gradient ────────────────────────────────────────────
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 120,
-                child: Container(
-                  decoration: const BoxDecoration(
+              // Dark gradient scrim — heavy at top (status bar) and bottom (controls)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.black54, Colors.transparent],
+                      colors: [
+                        Colors.black.withValues(alpha: 0.45),
+                        Colors.transparent,
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.75),
+                      ],
+                      stops: const [0.0, 0.18, 0.55, 1.0],
                     ),
                   ),
                 ),
               ),
 
-              // ── Bottom gradient ─────────────────────────────────────────
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 280,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black87, Colors.transparent],
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Right action column ─────────────────────────────────────
+              // Right action column — pinned bottom-right
               Positioned(
                 right: 12,
-                bottom: 120,
+                bottom: 24,
                 child: _RightActions(
                   reel: reel,
                   onLike: () => prov.toggleLike(reel.id),
@@ -200,54 +209,54 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
                 ),
               ),
 
-              // ── Bottom info ──────────────────────────────────────────────
+              // Bottom info + progress bar — pinned bottom-left
               Positioned(
-                bottom: 80,
-                left: 0,
-                right: 60,
-                child: _BottomInfo(
-                  reel: reel,
-                  onFollowTap: () {},
-                  onHashtagTap: widget.onHashtagTap,
+                left: 16,
+                right: 88,
+                bottom: 24,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _BottomInfo(
+                      reel: reel,
+                      onFollowTap: () {},
+                      onHashtagTap: widget.onHashtagTap,
+                    ),
+                    const SizedBox(height: 12),
+                    VideoProgressBar(
+                      progress: _videoProgress,
+                      currentSeconds: _controller?.value.position.inSeconds ?? 0,
+                      totalSeconds: _controller?.value.duration.inSeconds ?? reel.duration,
+                    ),
+                  ],
                 ),
               ),
 
-              // ── Progress bar ─────────────────────────────────────────────
-              Positioned(
-                bottom: 72,
-                left: 14,
-                right: 56,
-                child: VideoProgressBar(
-                  progress: _videoProgress,
-                  currentSeconds: _secondsWatched,
-                  totalSeconds: reel.duration,
-                ),
-              ),
-
-              // ── Pause indicator ──────────────────────────────────────────
+              // Pause indicator
               if (!_isPlaying)
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.black45,
+                      color: Colors.black.withValues(alpha: 0.45),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.pause_rounded,
                       color: Colors.white,
-                      size: 40,
+                      size: 44,
                     ),
                   ),
                 ),
 
-              // ── Double-tap heart ─────────────────────────────────────────
-              if (_showHeart)
+              // Double-tap heart animation
+              if (_showHeart && _heartCtrl != null)
                 Center(
                   child: AnimatedBuilder(
-                    animation: _heartCtrl,
+                    animation: _heartCtrl!,
                     builder: (_, _) {
-                      final t = _heartCtrl.value;
+                      final t = _heartCtrl!.value;
                       return Opacity(
                         opacity: (t < 0.5 ? t * 2 : (1 - t) * 2).clamp(0, 1),
                         child: Transform.scale(
@@ -299,14 +308,14 @@ class _Placeholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1a2740), Color(0xFF0d1520), Color(0xFF0a1020)],
+          colors: [Color(0xFF8BDCD5), Color(0xFF4FD1C5), Color(0xFF6366F1)],
         ),
       ),
       child: Center(
         child: Icon(
           Icons.play_circle_outline_rounded,
           size: 56,
-          color: Colors.white.withValues(alpha: 0.12),
+          color: Colors.white.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -354,14 +363,15 @@ class _RightActions extends StatelessWidget {
                 child: Container(
                   width: 18,
                   height: 18,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 1.5),
                   ),
                   child: const Icon(
                     Icons.add_rounded,
                     size: 12,
-                    color: Colors.white,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -419,116 +429,118 @@ class _BottomInfo extends StatelessWidget {
 
   const _BottomInfo({required this.reel, this.onFollowTap, this.onHashtagTap});
 
+  static const _shadow = [Shadow(color: Colors.black54, blurRadius: 8)];
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Uploader row
-          Row(
-            children: [
-              UserAvatar(
-                imageUrl: reel.uploader.profilePicUrl,
-                initials: reel.uploader.initials,
-                size: 28,
-              ),
-              const SizedBox(width: 8),
-              Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Uploader row
+        Row(
+          children: [
+            UserAvatar(
+              imageUrl: reel.uploader.profilePicUrl,
+              initials: reel.uploader.initials,
+              size: 30,
+              hasBorder: true,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
                 '@${reel.uploader.fullName.replaceAll(' ', '_').toLowerCase()}',
                 style: const TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
+                  shadows: _shadow,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 8),
-              if (!reel.uploader.isFollowing)
-                GestureDetector(
-                  onTap: onFollowTap,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white70, width: 1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Follow',
-                      style: TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+            ),
+            const SizedBox(width: 8),
+            if (!reel.uploader.isFollowing)
+              GestureDetector(
+                onTap: onFollowTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+                  ),
+                  child: const Text(
+                    'Follow',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-            ],
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // Caption
+        if (reel.caption != null && reel.caption!.isNotEmpty)
+          Text(
+            reel.caption!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+              height: 1.35,
+              shadows: _shadow,
+            ),
           ),
 
-          const SizedBox(height: 8),
-
-          // Caption
-          if (reel.caption != null && reel.caption!.isNotEmpty)
-            Text(
-              reel.caption!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-                height: 1.35,
-                shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
-              ),
-            ),
-
-          if (reel.hashtags.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              children: reel.hashtags
-                  .take(4)
-                  .map((tag) => HashtagChip(tag: tag, onTap: onHashtagTap))
-                  .toList(),
-            ),
-          ],
-
-          // Topic chip
-          if (reel.topic != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  reel.topic!.name,
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.75),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        if (reel.hashtags.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: reel.hashtags
+                .take(4)
+                .map((tag) => HashtagChip(tag: tag, onTap: onHashtagTap, dark: true))
+                .toList(),
+          ),
         ],
-      ),
+
+        // Topic chip
+        if (reel.topic != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                reel.topic!.name,
+                style: const TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 11,
+                  color: Colors.white70,
+                  shadows: _shadow,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -542,7 +554,7 @@ class _ShareSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.all(24),
@@ -555,7 +567,7 @@ class _ShareSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.darkBorder,
+                color: AppColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -567,7 +579,7 @@ class _ShareSheet extends StatelessWidget {
               fontFamily: 'Sora',
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: AppColors.darkText,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -625,9 +637,10 @@ class _ShareOption extends StatelessWidget {
             height: 52,
             decoration: BoxDecoration(
               color: AppColors.darkCard,
+              border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: Colors.white70, size: 24),
+            child: Icon(icon, color: AppColors.textPrimary, size: 24),
           ),
           const SizedBox(height: 6),
           Text(
@@ -635,7 +648,7 @@ class _ShareOption extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 11,
-              color: AppColors.darkTextMuted,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -643,3 +656,5 @@ class _ShareOption extends StatelessWidget {
     );
   }
 }
+
+

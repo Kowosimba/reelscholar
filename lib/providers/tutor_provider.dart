@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:reelscholar/models/tutor_models.dart';
 import '../core/services/tutor_service.dart';
 
@@ -6,6 +7,7 @@ enum TutorLoadState { idle, loading, loaded, error }
 
 class TutorProvider extends ChangeNotifier {
   final TutorService _svc = TutorService();
+  final FlutterTts _tts = FlutterTts();
 
   // ─── Modules list ────────────────────────────────────────────────────────────
   ModulesResponse? _modulesResponse;
@@ -36,6 +38,8 @@ class TutorProvider extends ChangeNotifier {
   TutorLoadState _voiceLessonState = TutorLoadState.idle;
   int _activeSegmentIndex = 0;
   bool _voiceIsPlaying = false;
+  String? _voiceModuleId;
+  bool _ttsReady = false;
 
   // ─── Module filter ───────────────────────────────────────────────────────────
   String _moduleFilter = 'all'; // all | in_progress | completed | not_started
@@ -285,10 +289,51 @@ class TutorProvider extends ChangeNotifier {
   }
 
   // ─── Voice lesson ────────────────────────────────────────────────────────────
+  Future<void> _initTts() async {
+    if (_ttsReady) return;
+    await _tts.setLanguage('en-US');
+    await _tts.setSpeechRate(0.88);
+    await _tts.setPitch(1.0);
+    await _tts.setVolume(1.0);
+    _tts.setCompletionHandler(_onTtsSegmentComplete);
+    _tts.setCancelHandler(_onTtsStopped);
+    _tts.setErrorHandler((_) => _onTtsStopped());
+    _ttsReady = true;
+  }
+
+  void _onTtsSegmentComplete() {
+    if (!_voiceIsPlaying || _voiceModuleId == null) return;
+    final lesson = _voiceLessons[_voiceModuleId!];
+    if (lesson == null) return;
+    if (_activeSegmentIndex < lesson.segments.length - 1) {
+      _activeSegmentIndex++;
+      notifyListeners();
+      _speakSegment(lesson.segments[_activeSegmentIndex].content);
+    } else {
+      // Reached the end — stop playing
+      _voiceIsPlaying = false;
+      notifyListeners();
+    }
+  }
+
+  void _onTtsStopped() {
+    if (_voiceIsPlaying) {
+      _voiceIsPlaying = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _speakSegment(String text) async {
+    await _tts.stop();
+    await _tts.speak(text);
+  }
+
   Future<void> loadVoiceLesson(String moduleId) async {
+    await _stopTts();
     if (_voiceLessons.containsKey(moduleId)) {
       _activeSegmentIndex = 0;
       _voiceIsPlaying = false;
+      _voiceModuleId = moduleId;
       notifyListeners();
       return;
     }
@@ -301,6 +346,7 @@ class TutorProvider extends ChangeNotifier {
       _voiceLessons[moduleId] = lesson;
       _activeSegmentIndex = 0;
       _voiceIsPlaying = false;
+      _voiceModuleId = moduleId;
       _voiceLessonState = TutorLoadState.loaded;
     } catch (e) {
       _voiceLessonState = TutorLoadState.error;
@@ -310,28 +356,65 @@ class TutorProvider extends ChangeNotifier {
 
   void setActiveSegment(int index) {
     _activeSegmentIndex = index;
+    if (_voiceIsPlaying && _voiceModuleId != null) {
+      final lesson = _voiceLessons[_voiceModuleId!];
+      if (lesson != null && index < lesson.segments.length) {
+        _speakSegment(lesson.segments[index].content);
+      }
+    }
     notifyListeners();
   }
 
-  void toggleVoicePlayback() {
-    _voiceIsPlaying = !_voiceIsPlaying;
+  Future<void> toggleVoicePlayback() async {
+    await _initTts();
+    if (_voiceIsPlaying) {
+      await _stopTts();
+    } else {
+      if (_voiceModuleId == null) return;
+      final lesson = _voiceLessons[_voiceModuleId!];
+      if (lesson == null || lesson.segments.isEmpty) return;
+      _voiceIsPlaying = true;
+      notifyListeners();
+      await _speakSegment(lesson.segments[_activeSegmentIndex].content);
+    }
+  }
+
+  Future<void> _stopTts() async {
+    await _tts.stop();
+    _voiceIsPlaying = false;
     notifyListeners();
   }
 
-  void nextSegment(String moduleId) {
+  Future<void> nextSegment(String moduleId) async {
     final lesson = _voiceLessons[moduleId];
     if (lesson == null) return;
     if (_activeSegmentIndex < lesson.segments.length - 1) {
       _activeSegmentIndex++;
       notifyListeners();
+      if (_voiceIsPlaying) {
+        await _speakSegment(lesson.segments[_activeSegmentIndex].content);
+      }
     }
   }
 
-  void prevSegment() {
+  Future<void> prevSegment() async {
     if (_activeSegmentIndex > 0) {
       _activeSegmentIndex--;
       notifyListeners();
+      if (_voiceIsPlaying && _voiceModuleId != null) {
+        final lesson = _voiceLessons[_voiceModuleId!];
+        if (lesson != null) {
+          await _speakSegment(lesson.segments[_activeSegmentIndex].content);
+        }
+      }
     }
+  }
+
+  // ─── Cleanup ─────────────────────────────────────────────────────────────────
+  @override
+  Future<void> dispose() async {
+    await _tts.stop();
+    super.dispose();
   }
 
   // ─── Clear active session ────────────────────────────────────────────────────

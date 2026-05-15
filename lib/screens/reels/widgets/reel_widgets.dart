@@ -93,33 +93,54 @@ class ReelActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? (activeColor ?? AppColors.primary) : Colors.white;
+    final color = isActive ? (activeColor ?? AppColors.primary) : AppColors.textPrimary;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            transitionBuilder: (child, anim) =>
-                ScaleTransition(scale: anim, child: child),
-            child: Icon(
-              isActive && activeIcon != null ? activeIcon : icon,
-              key: ValueKey(isActive),
-              size: 28,
-              color: color,
-              shadows: const [Shadow(color: Colors.black38, blurRadius: 8)],
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.94),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x160F172A),
+                  blurRadius: 16,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
+                child: Icon(
+                  isActive && activeIcon != null ? activeIcon : icon,
+                  key: ValueKey(isActive),
+                  size: 26,
+                  color: color,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.9),
-              shadows: const [Shadow(color: Colors.black54, blurRadius: 6)],
+          const SizedBox(height: 6),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Text(
+              label,
+              key: ValueKey('$label-$isActive'),
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                shadows: [Shadow(color: Colors.black45, blurRadius: 6)],
+              ),
             ),
           ),
         ],
@@ -160,7 +181,7 @@ class VideoProgressBar extends StatelessWidget {
             Container(
               height: 2,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -169,7 +190,7 @@ class VideoProgressBar extends StatelessWidget {
               child: Container(
                 height: 2,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -183,7 +204,7 @@ class VideoProgressBar extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -200,7 +221,7 @@ class VideoProgressBar extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withValues(alpha: 0.85),
                 ),
               ),
               Text(
@@ -208,7 +229,7 @@ class VideoProgressBar extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withValues(alpha: 0.85),
                 ),
               ),
             ],

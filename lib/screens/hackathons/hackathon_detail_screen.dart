@@ -56,8 +56,7 @@ class _HackathonDetailScreenState extends State<HackathonDetailScreen>
         }
         if (p.activeError != null && p.active == null) {
           return Scaffold(
-            appBar: AppBar(
-                backgroundColor: Colors.white, elevation: 0),
+            appBar: AppBar(elevation: 0),
             body: Center(
                 child: Text(p.activeError!,
                     style: const TextStyle(
@@ -139,7 +138,6 @@ class _HackSliverAppBar extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 180,
       pinned: true,
-      backgroundColor: Colors.white,
       foregroundColor: Colors.white,
       leading: IconButton(
         icon: Container(

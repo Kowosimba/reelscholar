@@ -357,6 +357,17 @@ class MessagingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> sendMessageRequest({
+    required String receiverId,
+    required String initialMessage,
+  }) async {
+    await _service.sendMessageRequest(
+      receiverId: receiverId,
+      initialMessage: initialMessage,
+    );
+    await loadRequests();
+  }
+
   void _updateConvUnread(String convId, int count) {
     final idx = _conversations.indexWhere((c) => c.id == convId);
     if (idx != -1) {

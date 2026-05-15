@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import '../core/services/reel_service.dart';
 
@@ -401,7 +401,7 @@ class ReelProvider extends ChangeNotifier {
 
   // ─── Upload ──────────────────────────────────────────────────────────────────
   Future<Reel?> uploadReel({
-    required File video,
+    required XFile video,
     String? caption,
     int? topicId,
   }) async {

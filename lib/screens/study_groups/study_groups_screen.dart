@@ -43,7 +43,6 @@ class _StudyGroupsScreenState extends State<StudyGroupsScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           'Study Groups',

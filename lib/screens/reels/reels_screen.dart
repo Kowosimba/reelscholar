@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/providers/navigation_provider.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'widgets/reel_widgets.dart';
 import 'widgets/reel_player_item.dart';
@@ -24,6 +24,7 @@ class _ReelsScreenState extends State<ReelsScreen>
 
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
+  FeedType? _lastFeedType;
 
   @override
   void initState() {
@@ -32,14 +33,6 @@ class _ReelsScreenState extends State<ReelsScreen>
       context.read<ReelProvider>().initialLoad();
     });
     _pageCtrl.addListener(_onPageScroll);
-
-    // Dark system bars for immersive feed
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarBrightness: Brightness.dark,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
   }
 
   void _onPageScroll() {
@@ -66,15 +59,28 @@ class _ReelsScreenState extends State<ReelsScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isReelsTab = context.watch<NavigationProvider>().isReels;
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
+          const _ReelsBackdrop(),
           // ── Reel PageView ──────────────────────────────────────────────
           Consumer<ReelProvider>(
             builder: (_, prov, _) {
+              // Reset to page 0 whenever the active feed tab changes
+              if (_lastFeedType != prov.activeFeed) {
+                _lastFeedType = prov.activeFeed;
+                if (_currentPage != 0) {
+                  _currentPage = 0;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
+                  });
+                }
+              }
+
               final reels = prov.currentFeedReels;
 
               if (prov.feedState == ReelLoadState.loading && reels.isEmpty) {
@@ -104,7 +110,7 @@ class _ReelsScreenState extends State<ReelsScreen>
                 itemCount: reels.length,
                 itemBuilder: (_, i) => ReelPlayerItem(
                   reel: reels[i],
-                  isActive: i == _currentPage,
+                  isActive: isReelsTab && i == _currentPage,
                   onProfileTap: () => Navigator.pushNamed(
                     context,
                     '/profile',
@@ -134,74 +140,64 @@ class _ReelsScreenState extends State<ReelsScreen>
                 right: 16,
                 bottom: 12,
               ),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black45, Colors.transparent],
-                ),
-              ),
               child: Row(
                 children: [
                   if (widget.onMenuTap != null) ...[
-                    GestureDetector(
-                      onTap: widget.onMenuTap,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.menu_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
+                    _TopIconButton(
+                      icon: Icons.menu_rounded,
+                      onTap: widget.onMenuTap!,
                     ),
                     const SizedBox(width: 10),
                   ],
-                  // Brand / tab selector
                   Expanded(
                     child: Consumer<ReelProvider>(
-                      builder: (_, prov, _) => Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _FeedTab(
-                            label: 'Following',
-                            active: prov.activeFeed == FeedType.following,
-                            onTap: () => prov.setFeedType(FeedType.following),
-                          ),
-                          const SizedBox(width: 20),
-                          _FeedTab(
-                            label: 'For You',
-                            active: prov.activeFeed == FeedType.forYou,
-                            onTap: () => prov.setFeedType(FeedType.forYou),
-                          ),
-                          const SizedBox(width: 20),
-                          _FeedTab(
-                            label: 'Trending',
-                            active: prov.activeFeed == FeedType.trending,
-                            onTap: () => prov.setFeedType(FeedType.trending),
-                          ),
-                        ],
+                      builder: (_, prov, _) => Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x120F172A),
+                              blurRadius: 22,
+                              offset: Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _FeedTab(
+                              label: 'Following',
+                              active: prov.activeFeed == FeedType.following,
+                              onTap: () => prov.setFeedType(FeedType.following),
+                            ),
+                            const SizedBox(width: 8),
+                            _FeedTab(
+                              label: 'For You',
+                              active: prov.activeFeed == FeedType.forYou,
+                              onTap: () => prov.setFeedType(FeedType.forYou),
+                            ),
+                            const SizedBox(width: 8),
+                            _FeedTab(
+                              label: 'Trending',
+                              active: prov.activeFeed == FeedType.trending,
+                              onTap: () => prov.setFeedType(FeedType.trending),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  // Search icon
-                  GestureDetector(
+                  const SizedBox(width: 10),
+                  _TopIconButton(
+                    icon: Icons.search_rounded,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const SearchReelsScreen(),
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.search_rounded,
-                      color: Colors.white,
-                      size: 24,
-                      shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
                     ),
                   ),
                 ],
@@ -230,33 +226,24 @@ class _FeedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Sora',
-              fontSize: 14,
-              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-              color: active
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.55),
-              shadows: const [Shadow(color: Colors.black45, blurRadius: 6)],
-            ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          gradient: active ? AppColors.fabGradient : null,
+          color: active ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Sora',
+            fontSize: 13,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            color: active ? Colors.white : AppColors.textSecondary,
           ),
-          if (active) ...[
-            const SizedBox(height: 3),
-            Container(
-              width: 20,
-              height: 2,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -272,16 +259,7 @@ class _FeedSkeleton extends StatelessWidget {
       color: Colors.black,
       child: Stack(
         children: [
-          // Shimmer bg
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a2740), Color(0xFF0d1520)],
-              ),
-            ),
-          ),
+          const _ReelsBackdrop(),
           const Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -296,7 +274,7 @@ class _FeedSkeleton extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 14,
-                    color: Colors.white54,
+                    color: Colors.white60,
                   ),
                 ),
               ],
@@ -321,7 +299,11 @@ class _FeedError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, color: Colors.white38, size: 52),
+            const Icon(
+              Icons.wifi_off_rounded,
+              color: Colors.white38,
+              size: 52,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Could not load reels',
@@ -329,7 +311,7 @@ class _FeedError extends StatelessWidget {
                 fontFamily: 'Sora',
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.white70,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 8),
@@ -348,5 +330,45 @@ class _FeedError extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _TopIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _TopIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x140F172A),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: AppColors.textPrimary, size: 20),
+      ),
+    );
+  }
+}
+
+class _ReelsBackdrop extends StatelessWidget {
+  const _ReelsBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(color: Colors.black);
   }
 }

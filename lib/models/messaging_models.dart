@@ -322,10 +322,32 @@ class Conversation {
               Map<String, dynamic>.from(p as Map),
             ))
         .toList();
+    final rawType = (j['type'] ??
+            j['conversation_type'] ??
+            j['chat_type'] ??
+            '')
+        .toString()
+        .toLowerCase();
+    final inferredGroup = rawType == 'group' ||
+        rawType == 'study_group' ||
+        rawType == 'study-group' ||
+        j['study_group_id'] != null ||
+        j['group_id'] != null ||
+        j['study_group'] is Map<String, dynamic>;
+    final resolvedType = inferredGroup
+        ? 'group'
+        : (rawType == 'direct' ||
+                rawType == 'dm' ||
+                rawType == 'private' ||
+                otherUser != null)
+            ? 'direct'
+            : participants.length > 2
+                ? 'group'
+                : 'direct';
 
     return Conversation(
       id: j['id']?.toString() ?? '',
-      type: j['type']?.toString() ?? 'direct',
+      type: resolvedType,
       name: j['name'] as String?,
       description: j['description'] as String?,
       avatarUrl: j['avatar_url'] as String?,

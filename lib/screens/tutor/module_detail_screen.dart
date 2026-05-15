@@ -30,7 +30,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
           // ── Hero app bar ────────────────────────────────────────────────

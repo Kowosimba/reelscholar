@@ -41,9 +41,7 @@ class _VoiceLessonScreenState extends State<VoiceLessonScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
@@ -176,7 +174,7 @@ class _VoiceLessonScreenState extends State<VoiceLessonScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -595,7 +593,7 @@ class _PlaybackControls extends StatelessWidget {
             children: [
               // Previous
               IconButton(
-                onPressed: isFirst ? null : prov.prevSegment,
+                onPressed: isFirst ? null : () => prov.prevSegment(),
                 icon: Icon(
                   Icons.skip_previous_rounded,
                   size: 28,
@@ -605,7 +603,7 @@ class _PlaybackControls extends StatelessWidget {
 
               // Play / Pause
               GestureDetector(
-                onTap: prov.toggleVoicePlayback,
+                onTap: () => prov.toggleVoicePlayback(),
                 child: AnimatedBuilder(
                   animation: pulseCtrl,
                   builder: (_, child) {

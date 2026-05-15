@@ -36,9 +36,8 @@ class StudyGroupService {
     final res = await http.get(uri, headers: await _headers());
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    final items = data['data'] as List? ?? [];
-    final meta = body['meta'] as Map<String, dynamic>? ?? {};
+    final items = _extractList(body['data']);
+    final meta = _extractMeta(body);
     return (
       groups: items
           .map((g) => StudyGroup.fromJson(g as Map<String, dynamic>))
@@ -79,7 +78,7 @@ class StudyGroupService {
         Uri.parse('${ApiConstants.baseUrl}/study-groups/my'), headers: await _headers());
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return (body['data'] as List)
+    return _extractList(body['data'])
         .map((g) => StudyGroup.fromJson(g as Map<String, dynamic>))
         .toList();
   }
@@ -337,6 +336,28 @@ class StudyGroupService {
       msg = (jsonDecode(res.body) as Map)['message'] as String?;
     } catch (_) {}
     throw Exception(msg ?? 'Request failed (${res.statusCode})');
+  }
+
+  List<dynamic> _extractList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map<String, dynamic>) {
+      final nested = data['data'];
+      if (nested is List) return nested;
+      final items = data['items'];
+      if (items is List) return items;
+    }
+    return [];
+  }
+
+  Map<String, dynamic> _extractMeta(Map<String, dynamic> body) {
+    final meta = body['meta'];
+    if (meta is Map<String, dynamic>) return meta;
+    final data = body['data'];
+    if (data is Map<String, dynamic>) {
+      final current = data['meta'];
+      if (current is Map<String, dynamic>) return current;
+    }
+    return {};
   }
 }
 

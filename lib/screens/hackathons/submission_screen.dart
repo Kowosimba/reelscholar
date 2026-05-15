@@ -153,9 +153,7 @@ class _SubmissionScreenState extends State<SubmissionScreen> {
     final isLocked = sub?.isFinalised == true;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,

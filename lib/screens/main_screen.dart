@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/auth_provider.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
+import 'package:reelscholar/providers/profile_provider.dart';
 import 'package:reelscholar/providers/app_colors.dart';
 import 'package:reelscholar/screens/reels/reels_screen.dart';
 import 'package:reelscholar/screens/profile/my_profile_screen.dart';
@@ -10,6 +11,7 @@ import 'package:reelscholar/screens/study_groups/study_groups_screen.dart';
 import 'package:reelscholar/screens/tutor/modules_screen.dart';
 import 'navigation/app_bottom_nav_bar.dart';
 import 'navigation/app_drawer.dart';
+import '../providers/theme_provider.dart';
 import 'chats/chats_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -21,7 +23,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _isDarkMode = false;
 
   // ── Tab screens ──────────────────────────────────────────────────────────────
   // Index 0 = Reels, 1 = Chats, 2 = Study Groups, 3 = Learn, 4 = Profile
@@ -44,36 +45,30 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final navProvider = context.watch<NavigationProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final currentIndex = navProvider.currentIndex;
-    final isReels = currentIndex == 0;
+    final isDark = themeProvider.isDarkMode;
 
-    // System bar style — dark on reels, light elsewhere
     SystemChrome.setSystemUIOverlayStyle(
-      isReels
-          ? const SystemUiOverlayStyle(
-              statusBarBrightness: Brightness.dark,
-              statusBarIconBrightness: Brightness.light,
-              systemNavigationBarColor: Colors.black,
-              systemNavigationBarIconBrightness: Brightness.light,
-            )
-          : const SystemUiOverlayStyle(
-              statusBarBrightness: Brightness.light,
-              statusBarIconBrightness: Brightness.dark,
-              systemNavigationBarColor: Colors.white,
-              systemNavigationBarIconBrightness: Brightness.dark,
-            ),
+      SystemUiOverlayStyle(
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: isDark ? const Color(0xFF020617) : Colors.white,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
     );
 
     return Scaffold(
       key: _scaffoldKey,
-      extendBody: true, // reels bleeds behind transparent nav bar
-      backgroundColor: isReels ? Colors.black : AppColors.white,
+      extendBody: false, // fixed overlap
+      backgroundColor: isDark ? const Color(0xFF020617) : AppColors.white,
 
       // ── Sidebar drawer ─────────────────────────────────────────────────
       drawer: AppDrawer(
-        user: _buildDrawerUser(context.watch<AuthProvider>()),
-        isDarkMode: _isDarkMode,
-        onDarkModeToggle: () => setState(() => _isDarkMode = !_isDarkMode),
+        user: _buildDrawerUser(
+          context.watch<AuthProvider>(),
+          context.watch<ProfileProvider>(),
+        ),
         onSignOut: _confirmSignOut,
       ),
 
@@ -81,11 +76,11 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(index: currentIndex, children: _screens),
 
       // ── Bottom navigation bar ──────────────────────────────────────────
-      bottomNavigationBar: AppBottomNavBar(isDark: isReels),
+      bottomNavigationBar: AppBottomNavBar(isDark: isDark),
     );
   }
 
-  DrawerUser _buildDrawerUser(AuthProvider auth) {
+  DrawerUser _buildDrawerUser(AuthProvider auth, ProfileProvider profile) {
     final u = auth.user;
     if (u == null) {
       return const DrawerUser(
@@ -95,9 +90,12 @@ class _MainScreenState extends State<MainScreen> {
         currentStreak: 0,
       );
     }
+    // Prefer the fresh URL from ProfileProvider (re-fetched on each profile load)
+    // over the stale signed URL stored in AuthProvider at login time.
+    final freshPicUrl = profile.profilePicUrl ?? u.profilePicUrl;
     return DrawerUser(
       fullName: u.fullName,
-      profilePicUrl: u.profilePicUrl,
+      profilePicUrl: freshPicUrl,
       programme: '${u.degreeProgramme} · Year ${u.yearLevel}',
       totalXp: u.totalXp,
       currentStreak: u.currentStreak,

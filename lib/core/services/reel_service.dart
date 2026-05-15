@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import '../constants/api_constants.dart';
@@ -118,7 +119,7 @@ class ReelService {
 
   // ─── POST /reels — multipart upload ────────────────────────────────────────
   Future<Reel> uploadReel({
-    required File video,
+    required XFile video,
     String? caption,
     int? topicId,
     void Function(double progress)? onProgress,
@@ -129,7 +130,16 @@ class ReelService {
     request.headers['Accept'] = 'application/json';
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
 
-    request.files.add(await http.MultipartFile.fromPath('video', video.path));
+    final bytes = await video.readAsBytes();
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'video',
+        bytes,
+        filename: video.name.isNotEmpty
+            ? video.name
+            : (kIsWeb ? 'reel-upload.mp4' : video.path.split('/').last),
+      ),
+    );
     if (caption != null && caption.isNotEmpty) {
       request.fields['body'] = caption;
     }
@@ -257,7 +267,7 @@ class ReelService {
       headers: await _headers(),
       body: jsonEncode({
         'body': body,
-        'reply_to_user_id': ?replyToUserId,
+        'reply_to_user_id': replyToUserId,
       }),
     );
     final resp = _parse(r);

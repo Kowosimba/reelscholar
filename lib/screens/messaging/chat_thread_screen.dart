@@ -128,7 +128,6 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   PreferredSizeWidget _buildAppBar(
       Conversation conv, MessagingProvider provider) {
     return AppBar(
-      backgroundColor: Colors.white,
       elevation: 0,
       titleSpacing: 0,
       leading: IconButton(

@@ -66,9 +66,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     final xpEarned = (result.score * 50).clamp(0, 9999);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(

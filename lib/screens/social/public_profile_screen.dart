@@ -46,8 +46,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         if (provider.profileError != null &&
             provider.viewedProfile == null) {
           return Scaffold(
-            appBar: AppBar(
-                backgroundColor: Colors.white, elevation: 0),
+            appBar: AppBar(elevation: 0),
             body: Center(
               child: Text(provider.profileError!,
                   style: const TextStyle(
@@ -304,7 +303,6 @@ class _ProfileSliverAppBar extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
-      backgroundColor: Colors.white,
       leading: IconButton(
         icon: Container(
           width: 32,

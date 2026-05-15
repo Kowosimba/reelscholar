@@ -46,7 +46,7 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen> {
         }
         if (p.groupError != null && p.activeGroup == null) {
           return Scaffold(
-            appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
+            appBar: AppBar(elevation: 0),
             body: Center(
               child: Text(p.groupError!,
                   style: const TextStyle(
@@ -179,7 +179,6 @@ class _GroupSliverAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverAppBar(
-      backgroundColor: Colors.white,
       expandedHeight: 130,
       pinned: true,
       elevation: 0,

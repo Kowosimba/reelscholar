@@ -7,10 +7,12 @@ import 'package:reelscholar/screens/chats/chats_screen.dart';
 import 'package:reelscholar/screens/profile/edit_profile_screen.dart';
 import 'package:reelscholar/screens/profile/settings_screen.dart';
 import 'package:reelscholar/screens/reels/upload_reel_screen.dart';
-import 'package:reelscholar/screens/social/blocked_users_screen.dart';
 import 'package:reelscholar/screens/social/followers_screen.dart';
 import 'package:reelscholar/screens/study_groups/study_groups_screen.dart';
 import 'package:reelscholar/screens/tutor/modules_screen.dart';
+import 'package:reelscholar/providers/reel_provider.dart';
+import 'package:reelscholar/models/reel_models.dart';
+import 'package:reelscholar/screens/reels/widgets/reel_player_item.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -25,13 +27,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileProvider>().loadMe();
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<ReelProvider>().loadUserReels(auth.user!.uid);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Consumer<ProfileProvider>(
         builder: (context, p, child) {
           if (p.meLoading && p.me == null) {
@@ -56,7 +61,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _Banner(),
+                      _Banner(p: p),
                       _AvatarEditRow(p: p),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -102,103 +107,66 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 18),
                           ],
                         ),
                       ),
-                      _XpStrip(p: p),
-                      _StatsRow(p: p),
-                      const SizedBox(height: 8),
-                      _SectionLabel(
-                        title: 'Quick Access',
-                        hint: 'Backend-linked tools and spaces',
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _SurfaceCard(child: _XpStrip(p: p)),
                       ),
-                      _Tile(
-                        icon: Icons.add_box_outlined,
-                        label: 'Add New Content',
-                        iconBg: const Color(0xFFE0F2FE),
-                        iconColor: const Color(0xFF0369A1),
-                        onTap: () => _push(context, const UploadReelScreen()),
+                      const SizedBox(height: 14),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _SurfaceCard(child: _StatsRow(p: p)),
                       ),
-                      _Tile(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        label: 'Chats',
-                        iconBg: const Color(0xFFEDE9FE),
-                        iconColor: const Color(0xFF6D28D9),
-                        onTap: () => _push(context, const ChatsScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.groups_outlined,
-                        label: 'Study Groups',
-                        iconBg: const Color(0xFFECFDF5),
-                        iconColor: const Color(0xFF047857),
-                        onTap: () => _push(context, const StudyGroupsScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.menu_book_outlined,
-                        label: 'Learning Hub',
-                        iconBg: const Color(0xFFFFF7ED),
-                        iconColor: const Color(0xFFEA580C),
-                        onTap: () => _push(context, const ModulesScreen()),
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 18),
                       const _SectionLabel(
-                        title: 'Account',
-                        hint: 'Profile and preferences',
+                        title: 'Quick Access',
+                        hint: 'Create, connect, and keep momentum',
                       ),
-                      _Tile(
-                        icon: Icons.person_outline_rounded,
-                        label: 'Edit Profile',
-                        onTap: () => _push(context, const EditProfileScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.lock_outline_rounded,
-                        label: 'Change Password',
-                        onTap: () =>
-                            _push(context, const ChangePasswordScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.notifications_outlined,
-                        label: 'Notifications',
-                        onTap: () => _push(context, const SettingsScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.dark_mode_outlined,
-                        label: 'Dark Mode',
-                        onTap: () => _push(context, const SettingsScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.shield_outlined,
-                        label: 'Privacy',
-                        onTap: () => _push(context, const BlockedUsersScreen()),
-                      ),
-                      _Tile(
-                        icon: Icons.people_outline_rounded,
-                        label: 'Followers & Following',
-                        onTap: () => _push(
-                          context,
-                          FollowersScreen(
-                            userId: p.me?['uid'] as String? ?? '',
-                            userName: p.displayName,
-                            initialTab: 0,
-                            isMine: true,
+                      _TileGroup(
+                        children: [
+                          _Tile(
+                            icon: Icons.add_box_outlined,
+                            label: 'Add New Content',
+                            subtitle: 'Upload a fresh learning reel',
+                            iconBg: const Color(0xFFE0F2FE),
+                            iconColor: const Color(0xFF0369A1),
+                            onTap: () => _push(context, const UploadReelScreen()),
                           ),
-                        ),
+                          _Tile(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            label: 'Chats',
+                            subtitle: 'Catch up on conversations',
+                            iconBg: const Color(0xFFEDE9FE),
+                            iconColor: const Color(0xFF6D28D9),
+                            onTap: () => _push(context, const ChatsScreen()),
+                          ),
+                          _Tile(
+                            icon: Icons.groups_outlined,
+                            label: 'Study Groups',
+                            subtitle: 'Jump back into your communities',
+                            iconBg: const Color(0xFFECFDF5),
+                            iconColor: const Color(0xFF047857),
+                            onTap: () => _push(context, const StudyGroupsScreen()),
+                          ),
+                          _Tile(
+                            icon: Icons.menu_book_outlined,
+                            label: 'Learning Hub',
+                            subtitle: 'Pick up where your modules left off',
+                            iconBg: const Color(0xFFFFF7ED),
+                            iconColor: const Color(0xFFEA580C),
+                            onTap: () => _push(context, const ModulesScreen()),
+                            isLast: true,
+                          ),
+                        ],
                       ),
-                      _Tile(
-                        icon: Icons.help_outline_rounded,
-                        label: 'Help & Support',
-                        onTap: () => _push(context, const SettingsScreen()),
+                      const _SectionLabel(
+                        title: 'My Content',
+                        hint: 'Manage your uploaded learning reels',
                       ),
-                      _Tile(
-                        icon: Icons.logout_rounded,
-                        label: 'Sign Out',
-                        iconBg: const Color(0xFFFEE2E2),
-                        iconColor: AppColors.error,
-                        labelColor: AppColors.error,
-                        showChevron: false,
-                        onTap: () => _confirmLogout(context),
-                      ),
+                      _MyContentGrid(p: p),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -227,92 +195,312 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     parts.add('Year ${p.yearLevel}');
     return parts.join(' · ');
   }
+}
 
-  void _confirmLogout(BuildContext ctx) {
-    showDialog(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Sign out?',
-          style: TextStyle(
-            fontFamily: 'Sora',
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
-        content: const Text(
-          'You\'ll need to sign in again to continue.',
-          style: TextStyle(
-            fontFamily: 'DM Sans',
-            fontSize: 13,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ctx.read<AuthProvider>().logout();
-              if (ctx.mounted) {
-                Navigator.pushReplacementNamed(ctx, '/login');
-              }
-            },
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: AppColors.error),
+class _MyContentGrid extends StatelessWidget {
+  final ProfileProvider p;
+  const _MyContentGrid({required this.p});
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = p.me?['uid'] as String? ?? '';
+    if (uid.isEmpty) return const SizedBox.shrink();
+
+    return Consumer<ReelProvider>(
+      builder: (context, rp, _) {
+        final reels = rp.userReels(uid);
+
+        if (reels.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: _SurfaceCard(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Icon(Icons.video_library_outlined,
+                        size: 40, color: AppColors.textTertiary),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No content yet',
+                      style: TextStyle(
+                        fontFamily: 'Sora',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Share your knowledge by uploading your first reel.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const UploadReelScreen()),
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Upload Reel'),
+                    ),
+                  ],
+                ),
+              ),
             ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.7,
+            ),
+            itemCount: reels.length,
+            itemBuilder: (context, index) {
+              final reel = reels[index];
+              return _ContentTile(reel: reel, reels: reels, index: index);
+            },
           ),
-        ],
+        );
+      },
+    );
+  }
+}
+
+class _ContentTile extends StatelessWidget {
+  final Reel reel;
+  final List<Reel> reels;
+  final int index;
+  const _ContentTile({required this.reel, required this.reels, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _ProfileReelViewer(reels: reels, initialIndex: index),
+          ),
+        );
+      },
+      onLongPress: () => _showOptions(context),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.border.withValues(alpha: 0.3),
+          image: reel.thumbnailUrl != null
+              ? DecorationImage(
+                  image: NetworkImage(reel.thumbnailUrl!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: Stack(
+          children: [
+            if (reel.thumbnailUrl == null)
+              const Center(child: Icon(Icons.play_circle_outline, color: AppColors.textTertiary)),
+            Positioned(
+              bottom: 6,
+              left: 6,
+              child: Row(
+                children: [
+                  const Icon(Icons.play_arrow_rounded, size: 12, color: Colors.white),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${reel.viewCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              title: const Text('Delete Reel', style: TextStyle(color: AppColors.error)),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Reel?'),
+                    content: const Text('This action cannot be undone.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true && context.mounted) {
+                  await context.read<ReelProvider>().deleteReel(reel.id);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _Banner extends StatelessWidget {
-  const _Banner();
+  final ProfileProvider p;
+  const _Banner({required this.p});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100,
+      height: 172,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF6366F1), AppColors.primary],
+          colors: [Color(0xFF0B7285), AppColors.primary, Color(0xFF6366F1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: SafeArea(
         bottom: false,
-        child: Align(
-          alignment: Alignment.topRight,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 8, right: 10),
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -22,
+              right: -28,
               child: Container(
-                width: 32,
-                height: 32,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.settings_rounded,
-                  size: 16,
-                  color: Colors.white,
+                  color: Colors.white.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
-          ),
+            Positioned(
+              bottom: -34,
+              left: -16,
+              child: Container(
+                width: 124,
+                height: 124,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: const Text(
+                          'My Space',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        ),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.14),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.settings_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    p.displayName.isEmpty ? 'Student Profile' : p.displayName,
+                    style: const TextStyle(
+                      fontFamily: 'Sora',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Track your streak, shape your profile, and keep your learning identity sharp.',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 12,
+                      height: 1.45,
+                      color: Colors.white.withValues(alpha: 0.86),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -341,12 +529,19 @@ class _AvatarEditRow extends StatelessWidget {
           Transform.translate(
             offset: const Offset(0, -36),
             child: Container(
-              width: 72,
-              height: 72,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(colors: _grad),
-                border: Border.all(color: Colors.white, width: 3),
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x220F172A),
+                    blurRadius: 24,
+                    offset: Offset(0, 12),
+                  ),
+                ],
               ),
               child: p.profilePicUrl != null
                   ? ClipOval(
@@ -374,11 +569,18 @@ class _AvatarEditRow extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primarySubtle,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.border,
                   ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x120F172A),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: const Text(
                   'Edit Profile',
@@ -500,9 +702,8 @@ class _XpStrip extends StatelessWidget {
     final xpInLevel = p.totalXp % 500;
     final xpLeft = 500 - xpInLevel;
     final nextLevel = p.xpLevel + 1;
-    return Container(
-      color: const Color(0xFFF8FAFC),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         children: [
           Row(
@@ -534,7 +735,7 @@ class _XpStrip extends StatelessWidget {
             child: LinearProgressIndicator(
               value: p.xpProgress,
               minHeight: 8,
-              backgroundColor: const Color(0xFFE2E8F0),
+              backgroundColor: const Color(0xFFDDE7F1),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppColors.primary,
               ),
@@ -569,15 +770,8 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = p.me?['uid'] as String? ?? '';
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFF1F5F9)),
-          bottom: BorderSide(color: Color(0xFFF1F5F9)),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Row(
         children: [
           _StatBox(value: '${p.videoCount}', label: 'Reels'),
@@ -621,7 +815,7 @@ class _StatsRow extends StatelessWidget {
   }
 
   Widget _divider() {
-    return Container(width: 1, height: 36, color: const Color(0xFFF1F5F9));
+    return Container(width: 1, height: 40, color: const Color(0xFFE2E8F0));
   }
 
   static String _fmt(int value) {
@@ -674,7 +868,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Row(
         children: [
           Text(
@@ -704,20 +898,26 @@ class _SectionLabel extends StatelessWidget {
 class _Tile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
   final Color iconBg;
   final Color iconColor;
   final Color labelColor;
+  final Color subtitleColor;
   final bool showChevron;
+  final bool isLast;
 
   const _Tile({
     required this.icon,
     required this.label,
+    this.subtitle,
     required this.onTap,
     this.iconBg = const Color(0xFFF8FAFC),
     this.iconColor = AppColors.textSecondary,
     this.labelColor = AppColors.textPrimary,
+    this.subtitleColor = AppColors.textTertiary,
     this.showChevron = true,
+    this.isLast = false,
   });
 
   @override
@@ -726,8 +926,12 @@ class _Tile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : const Border(
+                  bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                ),
         ),
         child: Row(
           children: [
@@ -742,14 +946,30 @@ class _Tile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: labelColor,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: labelColor,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 11,
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             if (showChevron)
@@ -759,6 +979,103 @@ class _Tile extends StatelessWidget {
                 color: AppColors.textTertiary,
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TileGroup extends StatelessWidget {
+  final List<Widget> children;
+
+  const _TileGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: _SurfaceCard(
+        child: Column(children: children),
+      ),
+    );
+  }
+}
+
+class _SurfaceCard extends StatelessWidget {
+  final Widget child;
+
+  const _SurfaceCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.9)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ProfileReelViewer extends StatefulWidget {
+  final List<Reel> reels;
+  final int initialIndex;
+
+  const _ProfileReelViewer({required this.reels, required this.initialIndex});
+
+  @override
+  State<_ProfileReelViewer> createState() => _ProfileReelViewerState();
+}
+
+class _ProfileReelViewerState extends State<_ProfileReelViewer> {
+  late final PageController _ctrl;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _ctrl = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: PageView.builder(
+        controller: _ctrl,
+        scrollDirection: Axis.vertical,
+        itemCount: widget.reels.length,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemBuilder: (_, i) => ReelPlayerItem(
+          reel: widget.reels[i],
+          isActive: i == _current,
+          onProfileTap: () => Navigator.pop(context),
+          onHashtagTap: () {},
         ),
       ),
     );
