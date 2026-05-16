@@ -27,6 +27,7 @@ class StudyGroup {
   final bool isFull;
   final bool isMember;
   final String? role; // creator | admin | member | null
+  final String? conversationId;
   final StudyGroupCreator? createdBy;
   final DateTime? createdAt;
 
@@ -42,6 +43,7 @@ class StudyGroup {
     required this.isFull,
     required this.isMember,
     this.role,
+    this.conversationId,
     this.createdBy,
     this.createdAt,
   });
@@ -63,6 +65,7 @@ class StudyGroup {
         isFull: j['is_full'] as bool? ?? false,
         isMember: j['is_member'] as bool? ?? false,
         role: j['role'] as String?,
+        conversationId: j['conversation_id'] as String?,
         createdBy: j['created_by'] != null
             ? StudyGroupCreator.fromJson(
                 j['created_by'] as Map<String, dynamic>)

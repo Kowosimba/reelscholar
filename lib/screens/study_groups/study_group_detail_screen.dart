@@ -18,19 +18,21 @@ class StudyGroupDetailScreen extends StatefulWidget {
 }
 
 class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen> {
+  late final StudyGroupProvider _provider;
+
   @override
   void initState() {
     super.initState();
+    _provider = context.read<StudyGroupProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final p = context.read<StudyGroupProvider>();
-      p.loadGroup(widget.groupId);
-      p.loadMembers(widget.groupId);
+      _provider.loadGroup(widget.groupId);
+      _provider.loadMembers(widget.groupId);
     });
   }
 
   @override
   void dispose() {
-    context.read<StudyGroupProvider>().clearActiveGroup();
+    _provider.clearActiveGroup();
     super.dispose();
   }
 

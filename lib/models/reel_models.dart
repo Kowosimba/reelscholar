@@ -14,7 +14,7 @@ class ReelUploader {
 
   factory ReelUploader.fromJson(Map<String, dynamic> j) => ReelUploader(
     uid: j['uid'] as String? ?? '',
-    fullName: j['full_name'] as String? ?? '',
+    fullName: (j['full_name'] ?? j['name'] ?? j['display_name'] ?? j['username'] ?? '') as String,
     profilePicUrl: j['profile_pic_url'] as String?,
     isFollowing: j['is_following'] as bool? ?? false,
   );
@@ -242,7 +242,7 @@ class CommentUser {
 
   factory CommentUser.fromJson(Map<String, dynamic> j) => CommentUser(
     uid: j['uid'] as String? ?? '',
-    fullName: j['full_name'] as String? ?? '',
+    fullName: (j['full_name'] ?? j['name'] ?? j['display_name'] ?? j['username'] ?? '') as String,
     profilePicUrl: j['profile_pic_url'] as String?,
   );
 

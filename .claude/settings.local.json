@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(dart analyze *)",
+      "Bash(xargs grep -l \"progress\\\\|Progress\" -i)",
+      "Bash(findstr -i api)",
+      "Bash(node -e ' *)",
+      "Bash(dir \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\" /B)",
+      "Bash(flutter pub *)"
     ]
   }
 }

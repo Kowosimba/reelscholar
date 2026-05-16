@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/study_group_provider.dart';
 import 'package:reelscholar/models/study_group_models.dart';
+import 'package:reelscholar/screens/messaging/chat_thread_screen.dart';
 import 'study_group_detail_screen.dart';
 import 'create_join_member_screens.dart';
 
@@ -262,12 +263,24 @@ class _DiscoverTabState extends State<_DiscoverTab> {
   }
 
   void _openGroup(BuildContext ctx, StudyGroup g) {
-    Navigator.push(
-      ctx,
-      MaterialPageRoute(
-        builder: (_) => StudyGroupDetailScreen(groupId: g.id),
-      ),
-    );
+    if (g.isMember && g.conversationId != null) {
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => ChatThreadScreen(
+            conversationId: g.conversationId!,
+            groupId: g.id,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (_) => StudyGroupDetailScreen(groupId: g.id),
+        ),
+      );
+    }
   }
 }
 
@@ -301,13 +314,27 @@ class _MyGroupsTab extends StatelessWidget {
             itemBuilder: (_, i) => _GroupCard(
               group: p.myGroups[i],
               showRole: true,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      StudyGroupDetailScreen(groupId: p.myGroups[i].id),
-                ),
-              ),
+              onTap: () {
+                final g = p.myGroups[i];
+                if (g.conversationId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatThreadScreen(
+                        conversationId: g.conversationId!,
+                        groupId: g.id,
+                      ),
+                    ),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudyGroupDetailScreen(groupId: g.id),
+                    ),
+                  );
+                }
+              },
             ),
           ),
         );

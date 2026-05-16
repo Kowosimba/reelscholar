@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/models/tutor_models.dart';
 import 'package:reelscholar/providers/tutor_provider.dart';
@@ -371,15 +372,79 @@ class _TutorChatBubble extends StatelessWidget {
                     ? CrossAxisAlignment.end
                     : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 14,
-                      color: isUser ? Colors.white : TColors.textPrimary,
-                      height: 1.45,
+                  if (isUser)
+                    Text(
+                      message.content,
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 14,
+                        color: Colors.white,
+                        height: 1.45,
+                      ),
+                    )
+                  else
+                    MarkdownBody(
+                      data: message.content,
+                      shrinkWrap: true,
+                      styleSheet: MarkdownStyleSheet(
+                        p: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 14,
+                          color: TColors.textPrimary,
+                          height: 1.45,
+                        ),
+                        strong: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: TColors.textPrimary,
+                        ),
+                        em: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          color: TColors.textPrimary,
+                        ),
+                        code: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          color: TColors.primary,
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: TColors.primarySubtle,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        h1: const TextStyle(
+                          fontFamily: 'Sora',
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: TColors.textPrimary,
+                        ),
+                        h2: const TextStyle(
+                          fontFamily: 'Sora',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: TColors.textPrimary,
+                        ),
+                        h3: const TextStyle(
+                          fontFamily: 'Sora',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: TColors.textPrimary,
+                        ),
+                        listBullet: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 14,
+                          color: TColors.textPrimary,
+                        ),
+                        blockquote: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          color: TColors.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
                   if (message.progress != null) ...[
                     const SizedBox(height: 6),
                     Text(

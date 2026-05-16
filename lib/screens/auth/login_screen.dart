@@ -24,17 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   @override
-  void initState() {
-    super.initState();
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarBrightness: Brightness.light,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-  }
-
-  @override
   void dispose() {
     _loginCtrl.dispose();
     _passwordCtrl.dispose();
@@ -56,8 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final auth = context.read<AuthProvider>();
       await auth.login(_loginCtrl.text.trim(), _passwordCtrl.text);
       if (!mounted) return;
-
-      // Route based on verification
       if (auth.user?.emailVerified == false) {
         Navigator.pushReplacementNamed(context, '/verify-email');
       } else {
@@ -74,165 +61,227 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+    ));
+
+    final surfaceColor =
+        isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC);
+    final textPrimary = isDark ? Colors.white : AppColors.textPrimary;
+    final textSub = isDark ? Colors.white60 : AppColors.textSecondary;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 36),
-
-                // ── Logo + heading ────────────────────────────────────────
-                const AppLogoBadge(size: 48),
-                const SizedBox(height: 18),
-                const Text(
-                  'Welcome back',
-                  style: TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Sign in to continue learning',
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ── Error ─────────────────────────────────────────────────
-                if (_error != null) AuthErrorBanner(message: _error!),
-
-                // ── Email / Student ID ────────────────────────────────────
-                const FieldLabel('Email / Student ID', required: true),
-                TextFormField(
-                  controller: _loginCtrl,
-                  focusNode: _loginFocus,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
-                  decoration: const InputDecoration(
-                    hintText: 'you@university.edu',
-                    prefixIcon: Icon(Icons.alternate_email_rounded, size: 20),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter your email or student ID'
-                      : null,
-                ),
-
-                const SizedBox(height: 16),
-
-                // ── Password ──────────────────────────────────────────────
-                const FieldLabel('Password', required: true),
-                TextFormField(
-                  controller: _passwordCtrl,
-                  focusNode: _passwordFocus,
-                  obscureText: !_passwordVisible,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _login(),
-                  decoration: InputDecoration(
-                    hintText: '••••••••',
-                    prefixIcon: const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 20,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _passwordVisible
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        size: 20,
-                        color: AppColors.textTertiary,
-                      ),
-                      onPressed: () =>
-                          setState(() => _passwordVisible = !_passwordVisible),
-                    ),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Enter your password' : null,
-                ),
-
-                // ── Forgot password ───────────────────────────────────────
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/forgot-password'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'Forgot password?',
-                      style: TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // ── Sign in button ────────────────────────────────────────
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    child: PrimaryButtonChild(
-                      label: 'Sign In',
-                      isLoading: _isLoading,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ── Sign up link ──────────────────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: surfaceColor,
+      body: Column(
+        children: [
+          // ── Gradient header ──────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(gradient: AppColors.splashGradient),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 36),
+                child: Column(
                   children: [
+                    const AppLogoBadge(size: 68),
+                    const SizedBox(height: 18),
                     const Text(
-                      'New here? ',
+                      'ReelScholar',
+                      style: TextStyle(
+                        fontFamily: 'Sora',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Learn. Create. Grow.',
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () =>
-                          Navigator.pushReplacementNamed(context, '/register'),
-                      child: const Text(
-                        'Create account',
-                        style: TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
+                        color: Colors.white.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           ),
-        ),
+
+          // ── Scrollable form ──────────────────────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title
+                    Text(
+                      'Welcome back',
+                      style: TextStyle(
+                        fontFamily: 'Sora',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sign in to continue learning',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        color: textSub,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Error
+                    if (_error != null) AuthErrorBanner(message: _error!),
+
+                    // Email / Student ID
+                    FieldLabel('Email / Student ID', required: true),
+                    TextFormField(
+                      controller: _loginCtrl,
+                      focusNode: _loginFocus,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      style: authInputTextStyle(isDark),
+                      onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
+                      decoration: authInputDecoration(
+                        isDark: isDark,
+                        hintText: 'you@university.edu',
+                        prefixIcon: Icon(
+                          Icons.alternate_email_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.white38
+                              : AppColors.textTertiary,
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your email or student ID'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Password
+                    FieldLabel('Password', required: true),
+                    TextFormField(
+                      controller: _passwordCtrl,
+                      focusNode: _passwordFocus,
+                      obscureText: !_passwordVisible,
+                      textInputAction: TextInputAction.done,
+                      style: authInputTextStyle(isDark),
+                      onFieldSubmitted: (_) => _login(),
+                      decoration: authInputDecoration(
+                        isDark: isDark,
+                        hintText: '••••••••',
+                        prefixIcon: Icon(
+                          Icons.lock_outline_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.white38
+                              : AppColors.textTertiary,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 20,
+                            color: isDark
+                                ? Colors.white38
+                                : AppColors.textTertiary,
+                          ),
+                          onPressed: () => setState(
+                              () => _passwordVisible = !_passwordVisible),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Enter your password' : null,
+                    ),
+
+                    // Forgot password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.pushNamed(
+                            context, '/forgot-password'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Sign In button
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        child: PrimaryButtonChild(
+                          label: 'Sign In',
+                          isLoading: _isLoading,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Sign up link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'New here? ',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 13,
+                            color: textSub,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pushReplacementNamed(
+                              context, '/register'),
+                          child: const Text(
+                            'Create account',
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

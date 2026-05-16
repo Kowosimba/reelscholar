@@ -40,27 +40,27 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    final data = body['data'] as Map<String, dynamic>;
+    final data = (body['data'] as Map<String, dynamic>?) ?? {};
 
-    final currentList = data['current_modules'] as List<dynamic>? ?? [];
+    // API shape: data.current_semester.modules
+    final currentSemester =
+        (data['current_semester'] as Map<String, dynamic>?) ?? {};
+    final currentList = currentSemester['modules'] as List<dynamic>? ?? [];
     final currentModules = currentList
         .map((m) => TutorModule.fromJson(m as Map<String, dynamic>))
         .toList();
 
-    // related_modules may be a string (JSON) or list
-    List<TutorModule> relatedModules = [];
-    final rawRelated = data['related_modules'];
-    if (rawRelated is List) {
-      relatedModules = rawRelated
-          .map((m) => TutorModule.fromJson(m as Map<String, dynamic>))
-          .toList();
-    } else if (rawRelated is String && rawRelated.isNotEmpty) {
-      try {
-        final parsed = jsonDecode(rawRelated) as List<dynamic>;
-        relatedModules = parsed
-            .map((m) => TutorModule.fromJson(m as Map<String, dynamic>))
-            .toList();
-      } catch (_) {}
+    // API shape: data.other_modules = [{label, modules: [...]}, ...]
+    final rawOtherGroups = data['other_modules'] as List<dynamic>? ?? [];
+    final relatedModules = <TutorModule>[];
+    for (final group in rawOtherGroups) {
+      if (group is Map<String, dynamic>) {
+        final groupModules = group['modules'] as List<dynamic>? ?? [];
+        relatedModules.addAll(
+          groupModules
+              .map((m) => TutorModule.fromJson(m as Map<String, dynamic>)),
+        );
+      }
     }
 
     return ModulesResponse(
@@ -77,7 +77,8 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    return SessionStartResult.fromJson(body['data'] as Map<String, dynamic>);
+    return SessionStartResult.fromJson(
+        (body['data'] as Map<String, dynamic>?) ?? {});
   }
 
   // ─── POST /tutor/modules/{module}/chat ──────────────────────────────────────
@@ -89,11 +90,11 @@ class TutorService {
       body: jsonEncode({'message': message}),
     );
     final body = _parse(r);
-    final data = body['data'] as Map<String, dynamic>;
+    final data = (body['data'] as Map<String, dynamic>?) ?? {};
     return ChatResponse(
       message: data['message']?.toString() ?? '',
-      progress:
-          SessionProgress.fromJson(data['progress'] as Map<String, dynamic>),
+      progress: SessionProgress.fromJson(
+          (data['progress'] as Map<String, dynamic>?) ?? {}),
     );
   }
 
@@ -105,7 +106,7 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    final data = body['data'] as Map<String, dynamic>;
+    final data = (body['data'] as Map<String, dynamic>?) ?? {};
     final rawMessages = data['messages'];
 
     if (rawMessages == null) return [];
@@ -139,7 +140,7 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    final data = body['data'] as Map<String, dynamic>;
+    final data = (body['data'] as Map<String, dynamic>?) ?? {};
     final rawCards = data['cards'] as List<dynamic>? ?? [];
 
     return rawCards.asMap().entries.map((entry) {
@@ -170,7 +171,7 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    return ConceptMap.fromJson(body['data'] as Map<String, dynamic>);
+    return ConceptMap.fromJson((body['data'] as Map<String, dynamic>?) ?? {});
   }
 
   // ─── GET /tutor/modules/{module}/voice-lesson ───────────────────────────────
@@ -181,7 +182,7 @@ class TutorService {
       headers: await _headers(),
     );
     final body = _parse(r);
-    return VoiceLesson.fromJson(body['data'] as Map<String, dynamic>);
+    return VoiceLesson.fromJson((body['data'] as Map<String, dynamic>?) ?? {});
   }
 
   // ─── POST /tutor/modules/{module}/reset ─────────────────────────────────────

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 
-/// Teal-tinted "R" logo badge used at top of auth screens
+/// Splash-style logo badge — white rounded box with bold "R"
 class AppLogoBadge extends StatelessWidget {
   final double size;
-  const AppLogoBadge({super.key, this.size = 44});
+  const AppLogoBadge({super.key, this.size = 72});
 
   @override
   Widget build(BuildContext context) {
@@ -12,15 +12,22 @@ class AppLogoBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.primarySubtle,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(size * 0.27),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Center(
         child: Text(
           'R',
           style: TextStyle(
             fontFamily: 'Sora',
-            fontSize: size * 0.45,
+            fontSize: size * 0.48,
             fontWeight: FontWeight.w900,
             color: AppColors.primary,
           ),
@@ -30,7 +37,7 @@ class AppLogoBadge extends StatelessWidget {
   }
 }
 
-/// Compact error banner matching wireframe error style
+/// Error banner
 class AuthErrorBanner extends StatelessWidget {
   final String message;
   const AuthErrorBanner({super.key, required this.message});
@@ -42,7 +49,7 @@ class AuthErrorBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppColors.errorLight,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
       ),
       child: Row(
@@ -81,9 +88,8 @@ class AuthSuccessBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppColors.successLight,
-        borderRadius: BorderRadius.circular(10),
-        border:
-            Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +115,7 @@ class AuthSuccessBanner extends StatelessWidget {
   }
 }
 
-/// Small field label — matching wireframe label style
+/// Field label with optional required asterisk
 class FieldLabel extends StatelessWidget {
   final String text;
   final bool required;
@@ -117,24 +123,27 @@ class FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: isDark ? Colors.white70 : AppColors.textSecondary,
             ),
           ),
           if (required)
             const Text(
               ' *',
               style: TextStyle(
-                  fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w700),
+                  fontSize: 12,
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w700),
             ),
         ],
       ),
@@ -142,72 +151,59 @@ class FieldLabel extends StatelessWidget {
   }
 }
 
-/// Progress bar for multi-step forms
-class StepProgressBar extends StatelessWidget {
-  final int current;
-  final int total;
-  const StepProgressBar({super.key, required this.current, required this.total});
+/// Returns a theme-aware InputDecoration for auth screens
+InputDecoration authInputDecoration({
+  required bool isDark,
+  required String hintText,
+  Widget? prefixIcon,
+  Widget? suffixIcon,
+}) {
+  final fillColor =
+      isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+  final borderColor =
+      isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+  final hintColor =
+      isDark ? Colors.white30 : const Color(0xFF94A3B8);
+  final radius = BorderRadius.circular(14.0);
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: current / total,
-            minHeight: 4,
-            backgroundColor: AppColors.border,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.primary),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Step $current of $total',
-          style: const TextStyle(
-            fontFamily: 'DM Sans',
-            fontSize: 11,
-            color: AppColors.textTertiary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
+  return InputDecoration(
+    hintText: hintText,
+    hintStyle: TextStyle(
+      fontFamily: 'DM Sans',
+      fontSize: 14,
+      color: hintColor,
+    ),
+    filled: true,
+    fillColor: fillColor,
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+    border: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: borderColor)),
+    enabledBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: borderColor)),
+    focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+    errorBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: const BorderSide(color: AppColors.error)),
+    focusedErrorBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: const BorderSide(color: AppColors.error, width: 2)),
+    errorStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 11),
+  );
 }
 
-/// Divider with "or" label
-class OrDivider extends StatelessWidget {
-  const OrDivider({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(height: 1, color: AppColors.border),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14),
-          child: Text(
-            'or',
-            style: TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 12,
-              color: AppColors.textTertiary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Container(height: 1, color: AppColors.border),
-        ),
-      ],
+/// Text style for text typed inside auth fields
+TextStyle authInputTextStyle(bool isDark) => TextStyle(
+      fontFamily: 'DM Sans',
+      fontSize: 14,
+      color: isDark ? Colors.white : const Color(0xFF1E293B),
     );
-  }
-}
 
 /// Loading state for primary button
 class PrimaryButtonChild extends StatelessWidget {
@@ -256,6 +252,36 @@ class PrimaryButtonChild extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w700,
           color: Colors.white),
+    );
+  }
+}
+
+/// Divider with centred "or" label
+class OrDivider extends StatelessWidget {
+  const OrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lineColor =
+        isDark ? Colors.white12 : AppColors.border;
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: lineColor)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            'or',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 12,
+              color: isDark ? Colors.white38 : AppColors.textTertiary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(child: Container(height: 1, color: lineColor)),
+      ],
     );
   }
 }

@@ -126,7 +126,7 @@ class SessionStartResult {
         message: j['message']?.toString() ?? '',
         conversationId: j['conversation_id']?.toString(),
         progress: SessionProgress.fromJson(
-          j['progress'] as Map<String, dynamic>,
+          (j['progress'] as Map<String, dynamic>?) ?? {},
         ),
       );
 }

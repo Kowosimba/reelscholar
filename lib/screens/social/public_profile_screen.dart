@@ -18,17 +18,20 @@ class PublicProfileScreen extends StatefulWidget {
 }
 
 class _PublicProfileScreenState extends State<PublicProfileScreen> {
+  late final SocialProvider _provider;
+
   @override
   void initState() {
     super.initState();
+    _provider = context.read<SocialProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SocialProvider>().loadProfile(widget.userId);
+      _provider.loadProfile(widget.userId);
     });
   }
 
   @override
   void dispose() {
-    context.read<SocialProvider>().clearProfile();
+    _provider.clearProfile();
     super.dispose();
   }
 

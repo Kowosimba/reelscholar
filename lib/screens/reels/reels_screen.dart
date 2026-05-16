@@ -128,76 +128,80 @@ class _ReelsScreenState extends State<ReelsScreen>
             },
           ),
 
-          // ── Top overlay: tabs + search ──────────────────────────────────
+          // ── Top overlay: TikTok-style tabs ──────────────────────────────
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 8,
+                top: MediaQuery.of(context).padding.top + 10,
                 left: 16,
                 right: 16,
-                bottom: 12,
+                bottom: 18,
               ),
               child: Row(
                 children: [
-                  if (widget.onMenuTap != null) ...[
-                    _TopIconButton(
-                      icon: Icons.menu_rounded,
-                      onTap: widget.onMenuTap!,
-                    ),
-                    const SizedBox(width: 10),
-                  ],
+                  if (widget.onMenuTap != null)
+                    GestureDetector(
+                      onTap: widget.onMenuTap,
+                      child: const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 26,
+                        shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 26),
                   Expanded(
                     child: Consumer<ReelProvider>(
-                      builder: (_, prov, _) => Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x120F172A),
-                              blurRadius: 22,
-                              offset: Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _FeedTab(
-                              label: 'Following',
-                              active: prov.activeFeed == FeedType.following,
-                              onTap: () => prov.setFeedType(FeedType.following),
-                            ),
-                            const SizedBox(width: 8),
-                            _FeedTab(
-                              label: 'For You',
-                              active: prov.activeFeed == FeedType.forYou,
-                              onTap: () => prov.setFeedType(FeedType.forYou),
-                            ),
-                            const SizedBox(width: 8),
-                            _FeedTab(
-                              label: 'Trending',
-                              active: prov.activeFeed == FeedType.trending,
-                              onTap: () => prov.setFeedType(FeedType.trending),
-                            ),
-                          ],
-                        ),
+                      builder: (_, prov, _) => Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _FeedTab(
+                            label: 'Following',
+                            active: prov.activeFeed == FeedType.following,
+                            onTap: () => prov.setFeedType(FeedType.following),
+                          ),
+                          const SizedBox(width: 20),
+                          _FeedTab(
+                            label: 'For You',
+                            active: prov.activeFeed == FeedType.forYou,
+                            onTap: () => prov.setFeedType(FeedType.forYou),
+                          ),
+                          const SizedBox(width: 20),
+                          _FeedTab(
+                            label: 'Trending',
+                            active: prov.activeFeed == FeedType.trending,
+                            onTap: () => prov.setFeedType(FeedType.trending),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  _TopIconButton(
-                    icon: Icons.search_rounded,
+                  GestureDetector(
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const SearchReelsScreen(),
                       ),
+                    ),
+                    child: const Icon(
+                      Icons.search_rounded,
+                      color: Colors.white,
+                      size: 26,
+                      shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
                     ),
                   ),
                 ],
@@ -210,7 +214,7 @@ class _ReelsScreenState extends State<ReelsScreen>
   }
 }
 
-// ─── Feed tab pill ────────────────────────────────────────────────────────────
+// ─── Feed tab (TikTok-style) ──────────────────────────────────────────────────
 class _FeedTab extends StatelessWidget {
   final String label;
   final bool active;
@@ -226,24 +230,32 @@ class _FeedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          gradient: active ? AppColors.fabGradient : null,
-          color: active ? null : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Sora',
-            fontSize: 13,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-            color: active ? Colors.white : AppColors.textSecondary,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Sora',
+              fontSize: 15,
+              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+              color: active ? Colors.white : Colors.white.withValues(alpha: 0.55),
+              shadows: const [Shadow(color: Colors.black38, blurRadius: 6)],
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            width: active ? 20 : 0,
+            height: 2,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -333,36 +345,6 @@ class _FeedError extends StatelessWidget {
   }
 }
 
-class _TopIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _TopIconButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x140F172A),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Icon(icon, color: AppColors.textPrimary, size: 20),
-      ),
-    );
-  }
-}
 
 class _ReelsBackdrop extends StatelessWidget {
   const _ReelsBackdrop();

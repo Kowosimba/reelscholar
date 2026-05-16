@@ -35,7 +35,7 @@ class QuizQuestion {
       order: int.tryParse(json['order'].toString()) ?? 0,
       question: json['question']?.toString() ?? '',
       options: opts,
-      explanation: json['explanation'] as String?,
+      explanation: json['explanation']?.toString(),
       correctIndex: json['correct_index'] != null
           ? int.tryParse(json['correct_index'].toString())
           : null,
@@ -136,8 +136,8 @@ class QuizResultItem {
       questionId: json['question_id']?.toString() ?? '',
       question: json['question']?.toString() ?? '',
       correctIndex: int.tryParse(json['correct_index'].toString()) ?? 0,
-      explanation: json['explanation'] as String?,
-      yourAnswer: json['your_answer'] as String?,
+      explanation: json['explanation']?.toString(),
+      yourAnswer: json['your_answer']?.toString(),
       isCorrect: correct,
     );
   }
@@ -209,11 +209,11 @@ class QuizAttempt {
   factory QuizAttempt.fromJson(Map<String, dynamic> json) {
     return QuizAttempt(
       attemptId: json['id']?.toString() ?? json['attempt_id']?.toString() ?? '',
-      quizId: json['quiz_id'] as String? ??
+      quizId: json['quiz_id']?.toString() ??
           (json['quiz'] as Map<String, dynamic>?)?['id']?.toString() ??
           '',
-      quizTitle: json['quiz_title'] as String? ??
-          (json['quiz'] as Map<String, dynamic>?)?['title'] as String? ??
+      quizTitle: json['quiz_title']?.toString() ??
+          (json['quiz'] as Map<String, dynamic>?)?['title']?.toString() ??
           'Quiz',
       score: int.tryParse(json['score'].toString()) ?? 0,
       total: int.tryParse(json['total'].toString()) ?? 0,

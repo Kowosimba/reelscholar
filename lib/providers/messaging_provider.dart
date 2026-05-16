@@ -402,7 +402,10 @@ class MessagingProvider extends ChangeNotifier {
     _remoteTyping = false;
     _hasMoreMessages = true;
     _messagePage = 1;
-    notifyListeners();
+    // Defer notification — this is often called from dispose() during widget
+    // tree teardown when the framework is locked and notifyListeners() would
+    // throw a setState-during-build assertion.
+    Future.microtask(notifyListeners);
   }
 
   @override

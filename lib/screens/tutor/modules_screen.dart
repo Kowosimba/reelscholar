@@ -312,19 +312,28 @@ class _ModulesScreenState extends State<ModulesScreen> {
         children: [
           for (final year in years) ...[
             for (final semester in (grouped[year]!.keys.toList()..sort())) ...[
-              SectionHeader(
-                title: 'Year $year · Semester $semester',
-                subtitle:
-                    '${grouped[year]![semester]!.length} module${grouped[year]![semester]!.length == 1 ? '' : 's'}',
-              ),
-              ...grouped[year]![semester]!
-                  .where((m) => prov.filteredModules.contains(m))
-                  .map(
-                    (m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ModuleCard(module: m, onTap: () => _openModule(m)),
+              Builder(builder: (context) {
+                final sectionModules = grouped[year]![semester]!
+                    .where((m) => prov.filteredModules.contains(m))
+                    .toList();
+                if (sectionModules.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SectionHeader(
+                      title: 'Year $year · Semester $semester',
+                      subtitle:
+                          '${sectionModules.length} module${sectionModules.length == 1 ? '' : 's'}',
                     ),
-                  ),
+                    ...sectionModules.map(
+                      (m) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: ModuleCard(module: m, onTap: () => _openModule(m)),
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ],
           ],
 

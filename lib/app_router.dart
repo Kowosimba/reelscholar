@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'models/tutor_models.dart';
+import 'screens/tutor/module_detail_screen.dart';
+import 'screens/progress/progress_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/chats/chats_screen.dart';
@@ -84,6 +87,9 @@ class AppRouter {
     studyGroups: (_) => const StudyGroupsScreen(),
     notifications: (_) => const NotificationsScreen(),
     hackathons: (_) => const HackathonListScreen(),
+    progress: (_) => const ProgressScreen(initialTab: 0),
+    leaderboard: (_) => const ProgressScreen(initialTab: 1),
+    achievements: (_) => const ProgressScreen(initialTab: 2),
     profile: (_) => const MyProfileScreen(),
     settings: (_) => const SettingsScreen(),
     searchUsers: (_) => const UserSearchScreen(),
@@ -116,11 +122,8 @@ class AppRouter {
         );
 
       case moduleDetail:
-        // final module = settings.arguments as TutorModule;
-        // return _slide(ModuleDetailScreen(module: module));
-        return _slide(
-          const Scaffold(body: Center(child: Text('Module Detail'))),
-        );
+        final module = settings.arguments as TutorModule;
+        return _slide(ModuleDetailScreen(module: module));
 
       case reelDetail:
         return _slide(const Scaffold(body: Center(child: Text('Reel Detail'))));

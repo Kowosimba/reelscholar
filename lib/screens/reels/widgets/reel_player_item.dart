@@ -222,6 +222,7 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
                       reel: reel,
                       onFollowTap: () {},
                       onHashtagTap: widget.onHashtagTap,
+                      onProfileTap: widget.onProfileTap,
                     ),
                     const SizedBox(height: 12),
                     VideoProgressBar(
@@ -293,7 +294,7 @@ class _VideoBackground extends StatelessWidget {
       return Image.network(
         thumbnailUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _Placeholder(),
+        errorBuilder: (context, error, stack) => _Placeholder(),
       );
     }
     return _Placeholder();
@@ -426,8 +427,14 @@ class _BottomInfo extends StatelessWidget {
   final Reel reel;
   final VoidCallback? onFollowTap;
   final VoidCallback? onHashtagTap;
+  final VoidCallback? onProfileTap;
 
-  const _BottomInfo({required this.reel, this.onFollowTap, this.onHashtagTap});
+  const _BottomInfo({
+    required this.reel,
+    this.onFollowTap,
+    this.onHashtagTap,
+    this.onProfileTap,
+  });
 
   static const _shadow = [Shadow(color: Colors.black54, blurRadius: 8)];
 
@@ -440,24 +447,35 @@ class _BottomInfo extends StatelessWidget {
         // Uploader row
         Row(
           children: [
-            UserAvatar(
-              imageUrl: reel.uploader.profilePicUrl,
-              initials: reel.uploader.initials,
-              size: 30,
-              hasBorder: true,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                '@${reel.uploader.fullName.replaceAll(' ', '_').toLowerCase()}',
-                style: const TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  shadows: _shadow,
-                ),
-                overflow: TextOverflow.ellipsis,
+            GestureDetector(
+              onTap: onProfileTap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  UserAvatar(
+                    imageUrl: reel.uploader.profilePicUrl,
+                    initials: reel.uploader.initials,
+                    size: 30,
+                    hasBorder: true,
+                  ),
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    child: Text(
+                      reel.uploader.fullName.isNotEmpty
+                          ? '@${reel.uploader.fullName.replaceAll(' ', '_').toLowerCase()}'
+                          : 'Unknown',
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        shadows: _shadow,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),

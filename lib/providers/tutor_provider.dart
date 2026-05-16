@@ -191,11 +191,12 @@ class TutorProvider extends ChangeNotifier {
   }
 
   // ─── Reset session ───────────────────────────────────────────────────────────
-  Future<void> resetSession() async {
-    if (_activeModule == null) return;
-    await _svc.resetSession(_activeModule!.moduleId);
-    _messages.clear();
-    _sessionProgress = null;
+  Future<void> resetSession(String moduleId) async {
+    await _svc.resetSession(moduleId);
+    if (_activeModule?.moduleId == moduleId) {
+      _messages.clear();
+      _sessionProgress = null;
+    }
     notifyListeners();
   }
 

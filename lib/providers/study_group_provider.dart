@@ -233,6 +233,12 @@ class StudyGroupProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> addMember(String groupId, String userId) async {
+    await _service.addMember(groupId, userId);
+    await loadMembers(groupId);
+    await loadGroup(groupId);
+  }
+
   Future<void> removeMember(String groupId, String userId) async {
     await _service.removeMember(groupId, userId);
     _members.removeWhere((m) => m.id == userId);

@@ -483,7 +483,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await context.read<TutorProvider>().resetSession();
+      await context.read<TutorProvider>().resetSession(module.moduleId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

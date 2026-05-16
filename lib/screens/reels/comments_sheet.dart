@@ -278,6 +278,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       controller: _textCtrl,
                       focusNode: _focusNode,
                       maxLines: null,
+                      cursorColor: AppColors.darkText,
                       style: const TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 14,
@@ -295,6 +296,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
                           color: AppColors.darkTextMuted,
                         ),
                         border: InputBorder.none,
+                        filled: true,
+                        fillColor: AppColors.darkCard,
                       ),
                       onSubmitted: (_) => _submit(),
                     ),
@@ -413,13 +416,20 @@ class _CommentTileState extends State<_CommentTile> {
                 // Username + time + creator badge
                 Row(
                   children: [
-                    Text(
-                      c.user.fullName,
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkText,
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/profile',
+                        arguments: c.user.uid,
+                      ),
+                      child: Text(
+                        c.user.fullName.isNotEmpty ? c.user.fullName : 'User',
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkText,
+                        ),
                       ),
                     ),
                     if (c.isCreatorComment) ...[
@@ -563,19 +573,28 @@ class _CommentTileState extends State<_CommentTile> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      reply.user.fullName,
-                                      style: const TextStyle(
-                                        fontFamily: 'DM Sans',
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.darkText,
+                                    GestureDetector(
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        '/profile',
+                                        arguments: reply.user.uid,
+                                      ),
+                                      child: Text(
+                                        reply.user.fullName.isNotEmpty
+                                            ? reply.user.fullName
+                                            : 'User',
+                                        style: const TextStyle(
+                                          fontFamily: 'DM Sans',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.darkText,
+                                        ),
                                       ),
                                     ),
                                     if (reply.replyTo != null) ...[
                                       const SizedBox(width: 4),
                                       Text(
-                                        '→ ${reply.replyTo!.fullName}',
+                                        '→ ${reply.replyTo!.fullName.isNotEmpty ? reply.replyTo!.fullName : 'User'}',
                                         style: const TextStyle(
                                           fontFamily: 'DM Sans',
                                           fontSize: 10,

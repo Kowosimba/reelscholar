@@ -7,11 +7,17 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/models/messaging_models.dart';
 import 'package:reelscholar/providers/messaging_provider.dart';
+import 'package:reelscholar/screens/study_groups/study_group_detail_screen.dart';
 
 class ChatThreadScreen extends StatefulWidget {
   final String conversationId;
+  final String? groupId;
 
-  const ChatThreadScreen({super.key, required this.conversationId});
+  const ChatThreadScreen({
+    super.key,
+    required this.conversationId,
+    this.groupId,
+  });
 
   @override
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -135,46 +141,68 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
             color: AppColors.textPrimary, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
-      title: Row(
-        children: [
-          _SmallAvatar(name: conv.displayName, isGroup: conv.isGroup),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  conv.displayName,
-                  style: const TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+      title: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: conv.isGroup && widget.groupId != null
+            ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        StudyGroupDetailScreen(groupId: widget.groupId!),
                   ),
-                ),
-                if (conv.isGroup)
-                  Text(
-                    '${conv.participantsCount} members',
-                    style: const TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                  )
-                else
-                  const Text(
-                    'Online',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11,
-                      color: AppColors.success,
-                      fontWeight: FontWeight.w500,
-                    ),
+                )
+            : null,
+        child: Row(
+          children: [
+            _SmallAvatar(name: conv.displayName, isGroup: conv.isGroup),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          conv.displayName,
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (conv.isGroup && widget.groupId != null)
+                        const Icon(Icons.chevron_right_rounded,
+                            size: 14, color: AppColors.textTertiary),
+                    ],
                   ),
-              ],
+                  if (conv.isGroup)
+                    Text(
+                      '${conv.participantsCount} members',
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    )
+                  else
+                    const Text(
+                      'Online',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 11,
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         if (!conv.isGroup)

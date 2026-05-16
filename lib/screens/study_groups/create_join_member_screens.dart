@@ -1,8 +1,12 @@
 // lib/features/study_groups/screens/create_study_group_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
+import 'package:reelscholar/core/services/social_service.dart';
+import 'package:reelscholar/models/social_models.dart';
 import 'package:reelscholar/providers/study_group_provider.dart';
 import 'package:reelscholar/models/study_group_models.dart';
 import 'study_group_detail_screen.dart';
@@ -709,6 +713,40 @@ class _MemberManagementScreenState extends State<MemberManagementScreen> {
           ),
         ),
       ),
+      floatingActionButton: Consumer<StudyGroupProvider>(
+        builder: (_, p, _) {
+          final group = p.activeGroup;
+          if (group == null || !group.isAdmin) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            onPressed: group.isFull
+                ? null
+                : () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => _AddMemberSheet(
+                        groupId: widget.groupId,
+                        currentMemberIds:
+                            p.members.map((m) => m.id).toSet(),
+                        memberCount: group.memberCount,
+                        capacity: group.capacity,
+                      ),
+                    ),
+            backgroundColor:
+                group.isFull ? AppColors.border : AppColors.primary,
+            icon: const Icon(Icons.person_add_rounded,
+                color: Colors.white, size: 18),
+            label: Text(
+              group.isFull ? 'Group Full' : 'Add Member',
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          );
+        },
+      ),
       body: Consumer<StudyGroupProvider>(
         builder: (_, p, _) {
           if (p.membersLoading && p.members.isEmpty) {
@@ -872,3 +910,368 @@ class _MemberManageTile extends StatelessWidget {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// Add Member Sheet (admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+class _AddMemberSheet extends StatefulWidget {
+  final String groupId;
+  final Set<String> currentMemberIds;
+  final int memberCount;
+  final int capacity;
+
+  const _AddMemberSheet({
+    required this.groupId,
+    required this.currentMemberIds,
+    required this.memberCount,
+    required this.capacity,
+  });
+
+  @override
+  State<_AddMemberSheet> createState() => _AddMemberSheetState();
+}
+
+class _AddMemberSheetState extends State<_AddMemberSheet> {
+  final _searchCtrl = TextEditingController();
+  final _focusNode = FocusNode();
+  final _service = SocialService();
+  Timer? _debounce;
+
+  List<AppUser> _results = [];
+  bool _searching = false;
+  String? _searchError;
+  final Set<String> _adding = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().length < 2) {
+      setState(() {
+        _results = [];
+        _searchError = null;
+      });
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 350), () => _search(q.trim()));
+  }
+
+  Future<void> _search(String q) async {
+    setState(() {
+      _searching = true;
+      _searchError = null;
+    });
+    try {
+      final res = await _service.searchUsers(query: q, perPage: 20);
+      if (mounted) {
+        setState(() {
+          _results = res.users
+              .where((u) => !widget.currentMemberIds.contains(u.uid))
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _searchError = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _add(AppUser user) async {
+    setState(() => _adding.add(user.uid));
+    try {
+      await context
+          .read<StudyGroupProvider>()
+          .addMember(widget.groupId, user.uid);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ));
+        setState(() => _adding.remove(user.uid));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final sheetBg = theme.scaffoldBackgroundColor;
+    final cardBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final borderColor = isDark ? const Color(0xFF1E293B) : AppColors.border;
+    final handleColor = isDark ? const Color(0xFF334155) : AppColors.border;
+    final remaining = widget.capacity - widget.memberCount;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, scrollCtrl) => Container(
+        decoration: BoxDecoration(
+          color: sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            const SizedBox(height: 10),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: handleColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text(
+                    'Add Member',
+                    style: TextStyle(
+                      fontFamily: 'Sora',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: remaining <= 2
+                          ? const Color(0xFFFEF3C7)
+                          : AppColors.primarySubtle,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${widget.memberCount}/${widget.capacity}',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: remaining <= 2
+                            ? const Color(0xFF92400E)
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Search field — uses global InputDecorationTheme
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _searchCtrl,
+                focusNode: _focusNode,
+                onChanged: _onChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search by name or student ID…',
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  suffixIcon: _searching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Results / states
+            Expanded(
+              child: Builder(builder: (_) {
+                if (_searchError != null) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.error, size: 32),
+                          const SizedBox(height: 8),
+                          Text(
+                            _searchError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 13,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (_results.isEmpty) {
+                  return Center(
+                    child: Text(
+                      _searchCtrl.text.trim().length < 2
+                          ? 'Type at least 2 characters to search'
+                          : 'No users found',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  controller: scrollCtrl,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: _results.length,
+                  itemBuilder: (_, i) {
+                    final user = _results[i];
+                    final hue =
+                        user.fullName.codeUnits.fold(0, (a, b) => a + b) % 360;
+                    final isAdding = _adding.contains(user.uid);
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                HSLColor.fromAHSL(1, hue.toDouble(), 0.6, 0.4)
+                                    .toColor(),
+                                HSLColor.fromAHSL(
+                                        1, (hue + 40.0) % 360, 0.7, 0.3)
+                                    .toColor(),
+                              ]),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                user.fullName.isNotEmpty
+                                    ? user.fullName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  fontFamily: 'Sora',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user.fullName,
+                                  style: TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                if (user.studentId != null)
+                                  Text(
+                                    user.studentId!,
+                                    style: TextStyle(
+                                      fontFamily: 'DM Sans',
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.55),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: isAdding ? null : () => _add(user),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                minimumSize: Size.zero,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: isAdding
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white),
+                                    )
+                                  : const Text(
+                                      'Add',
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
+          ],
+        ),
+      ),
+    );
+  }
+}

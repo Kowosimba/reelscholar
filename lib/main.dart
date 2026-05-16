@@ -16,6 +16,8 @@ import 'core/services/profile_service.dart';
 import 'core/services/social_service.dart';
 import 'core/services/hackathon_service.dart';
 import 'providers/hackathon_provider.dart';
+import 'core/services/progress_service.dart';
+import 'providers/progress_provider.dart';
 import 'providers/theme_provider.dart';
 import 'core/constants/app_colors.dart';
 import 'app_router.dart';
@@ -48,6 +50,7 @@ class ReelScholarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider(ProfileService())),
         ChangeNotifierProvider(create: (_) => SocialProvider(SocialService())),
         ChangeNotifierProvider(create: (_) => HackathonProvider(HackathonService())),
+        ChangeNotifierProvider(create: (_) => ProgressProvider(ProgressService())),
         ChangeNotifierProxyProvider<AuthProvider, MessagingProvider>(
           create: (_) => MessagingProvider(MessagingService()),
           update: (_, auth, previous) {

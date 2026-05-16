@@ -37,51 +37,9 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: [
-                _SectionLabel('Main', color: labelColor),
-                _DrawerTile(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                  isSelected: nav.currentIndex == 0,
-                  onTap: () => _goTab(context, nav, 0),
-                  isDark: isDark,
-                ),
-                _DrawerTile(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  activeIcon: Icons.chat_bubble_rounded,
-                  label: 'Chats',
-                  isSelected: nav.currentIndex == 1,
-                  badge: nav.unreadChats,
-                  onTap: () => _goTab(context, nav, 1),
-                  isDark: isDark,
-                ),
-                _DrawerTile(
-                  icon: Icons.groups_outlined,
-                  activeIcon: Icons.groups_rounded,
-                  label: 'Study Groups',
-                  isSelected: nav.currentIndex == 2,
-                  onTap: () => _goTab(context, nav, 2),
-                  isDark: isDark,
-                ),
-                _DrawerTile(
-                  icon: Icons.psychology_outlined,
-                  activeIcon: Icons.psychology_rounded,
-                  label: 'Learning Hub',
-                  isSelected: nav.currentIndex == 3,
-                  onTap: () => _goTab(context, nav, 3),
-                  isDark: isDark,
-                ),
-                _DrawerTile(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: 'My Profile',
-                  isSelected: nav.currentIndex == 4,
-                  onTap: () => _goTab(context, nav, 4),
-                  isDark: isDark,
-                ),
+                _SectionLabel('Discover', color: labelColor),
                 _DrawerTile(
                   icon: Icons.notifications_none_rounded,
-                  activeIcon: Icons.notifications_rounded,
                   label: 'Notifications',
                   badge: nav.unreadNotifications,
                   onTap: () {
@@ -92,7 +50,6 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _DrawerTile(
                   icon: Icons.emoji_events_outlined,
-                  activeIcon: Icons.emoji_events_rounded,
                   label: 'Hackathons',
                   onTap: () {
                     Navigator.pop(context);
@@ -102,7 +59,6 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _DrawerTile(
                   icon: Icons.bookmark_border_rounded,
-                  activeIcon: Icons.bookmark_rounded,
                   label: 'Saved Reels',
                   onTap: () {
                     Navigator.pop(context);
@@ -125,6 +81,37 @@ class AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, '/upload-reel');
+                  },
+                  isDark: isDark,
+                ),
+
+                const Divider(height: 32, thickness: 0.5),
+
+                _SectionLabel('Progress', color: labelColor),
+                _DrawerTile(
+                  icon: Icons.bar_chart_outlined,
+                  label: 'My Progress',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/progress');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.leaderboard_outlined,
+                  label: 'Leaderboard',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/leaderboard');
+                  },
+                  isDark: isDark,
+                ),
+                _DrawerTile(
+                  icon: Icons.military_tech_outlined,
+                  label: 'Achievements',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/achievements');
                   },
                   isDark: isDark,
                 ),
@@ -196,10 +183,6 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  void _goTab(BuildContext context, NavigationProvider nav, int index) {
-    Navigator.pop(context);
-    nav.setTab(index);
-  }
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -264,12 +247,7 @@ class _DrawerHeader extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Image(
-                image: const AssetImage('assets/images/logo_small.png'),
-                width: 28,
-                height: 28,
-                errorBuilder: (_, _, _) => const Icon(Icons.school_rounded, color: AppColors.primary),
-              ),
+              const Icon(Icons.school_rounded, color: AppColors.primary, size: 28),
             ],
           ),
           const SizedBox(height: 16),
@@ -298,9 +276,7 @@ class _DrawerHeader extends StatelessWidget {
 
 class _DrawerTile extends StatelessWidget {
   final IconData icon;
-  final IconData? activeIcon;
   final String label;
-  final bool isSelected;
   final int badge;
   final VoidCallback onTap;
   final Color? color;
@@ -309,9 +285,7 @@ class _DrawerTile extends StatelessWidget {
 
   const _DrawerTile({
     required this.icon,
-    this.activeIcon,
     required this.label,
-    this.isSelected = false,
     this.badge = 0,
     required this.onTap,
     this.color,
@@ -321,14 +295,8 @@ class _DrawerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = color ?? AppColors.primary;
-    final inactiveColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final finalIconColor = isSelected ? activeColor : (color ?? inactiveColor);
-    final finalTextColor = isSelected ? activeColor : (color ?? (isDark ? Colors.white : const Color(0xFF1E293B)));
-    
-    final bg = isSelected 
-      ? activeColor.withValues(alpha: isDark ? 0.15 : 0.08) 
-      : Colors.transparent;
+    final iconColor = color ?? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
+    final textColor = color ?? (isDark ? Colors.white : const Color(0xFF1E293B));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -341,24 +309,20 @@ class _DrawerTile extends StatelessWidget {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: bg,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(99),
             ),
             child: Row(
               children: [
-                Icon(
-                  isSelected ? (activeIcon ?? icon) : icon,
-                  size: 22,
-                  color: finalIconColor,
-                ),
+                Icon(icon, size: 22, color: iconColor),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: finalTextColor,
+                      fontWeight: FontWeight.w500,
+                      color: textColor,
                       fontFamily: AppFonts.dmSans,
                     ),
                   ),

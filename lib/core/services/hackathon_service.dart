@@ -26,9 +26,21 @@ class HackathonService {
         headers: headers);
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    final items = data['data'] as List? ?? [];
-    final meta = body['meta'] as Map<String, dynamic>? ?? {};
+    final rawData = body['data'];
+    final List items;
+    final Map<String, dynamic> meta;
+    if (rawData is List) {
+      items = rawData;
+      meta = body['meta'] as Map<String, dynamic>? ?? {};
+    } else if (rawData is Map<String, dynamic>) {
+      items = rawData['data'] as List? ?? [];
+      meta = body['meta'] as Map<String, dynamic>? ??
+          rawData['meta'] as Map<String, dynamic>? ??
+          {};
+    } else {
+      items = [];
+      meta = {};
+    }
     return (
       items: items
           .map((h) => Hackathon.fromJson(h as Map<String, dynamic>))
@@ -208,9 +220,21 @@ class HackathonService {
         headers: headers);
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final data = body['data'] as Map<String, dynamic>;
-    final items = data['data'] as List? ?? [];
-    final meta = body['meta'] as Map<String, dynamic>? ?? {};
+    final rawData = body['data'];
+    final List items;
+    final Map<String, dynamic> meta;
+    if (rawData is List) {
+      items = rawData;
+      meta = body['meta'] as Map<String, dynamic>? ?? {};
+    } else if (rawData is Map<String, dynamic>) {
+      items = rawData['data'] as List? ?? [];
+      meta = body['meta'] as Map<String, dynamic>? ??
+          rawData['meta'] as Map<String, dynamic>? ??
+          {};
+    } else {
+      items = [];
+      meta = {};
+    }
     return (
       comments: items
           .map((c) =>
