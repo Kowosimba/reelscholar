@@ -17,6 +17,12 @@ class ChatsScreen extends StatefulWidget {
 class _ChatsScreenState extends State<ChatsScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  bool _showGroups = false;
+
+  void _switchTab(bool groups) {
+    if (_showGroups == groups) return;
+    setState(() => _showGroups = groups);
+  }
 
   @override
   void initState() {
@@ -24,6 +30,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final m = context.read<MessagingProvider>();
       m.loadConversations(refresh: true);
+      m.loadGroupConversations();
       m.loadRequests();
     });
   }
@@ -92,16 +99,37 @@ class _ChatsScreenState extends State<ChatsScreen> {
               ],
             ),
           ),
+          // Direct / Groups tab strip
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(
+              children: [
+                _TabChip(
+                  label: 'Direct',
+                  selected: !_showGroups,
+                  onTap: () => _switchTab(false),
+                ),
+                const SizedBox(width: 8),
+                _TabChip(
+                  label: 'Groups',
+                  selected: _showGroups,
+                  onTap: () => _switchTab(true),
+                ),
+              ],
+            ),
+          ),
           const Divider(color: AppColors.border, height: 1),
           Expanded(
             child: Consumer<MessagingProvider>(
               builder: (_, p, _) {
-                if (p.convsLoading && p.conversations.isEmpty) {
+                final loading = _showGroups ? p.groupConvsLoading : p.convsLoading;
+                final allConvs = p.conversations;
+                if (loading && allConvs.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   );
                 }
-                if (p.convsError != null && p.conversations.isEmpty) {
+                if (p.convsError != null && allConvs.isEmpty) {
                   return _EmptyState(
                     icon: Icons.error_outline_rounded,
                     title: 'Could not load messages',
@@ -110,7 +138,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     onAction: () => p.loadConversations(refresh: true),
                   );
                 }
-                var list = p.conversations.where((c) => c.isDirect).toList();
+                var list = _showGroups
+                    ? allConvs.where((c) => c.isGroup).toList()
+                    : allConvs.where((c) => c.isDirect).toList();
                 if (_searchQuery.isNotEmpty) {
                   final q = _searchQuery.toLowerCase();
                   list = list
@@ -119,20 +149,33 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 }
                 if (list.isEmpty) {
                   return _EmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
+                    icon: _showGroups
+                        ? Icons.group_outlined
+                        : Icons.chat_bubble_outline_rounded,
                     title: _searchQuery.isNotEmpty
-                        ? 'No matching messages'
-                        : 'No direct messages yet',
+                        ? 'No matching conversations'
+                        : _showGroups
+                            ? 'No group chats yet'
+                            : 'No direct messages yet',
                     subtitle: _searchQuery.isNotEmpty
                         ? 'Try a different name'
-                        : 'Search for people, follow them, and send a message request to start chatting.',
-                    actionLabel: _searchQuery.isEmpty ? 'Find People' : null,
-                    onAction: _searchQuery.isEmpty ? _openPeopleSearch : null,
+                        : _showGroups
+                            ? 'Join a study group to start chatting with its members.'
+                            : 'Search for people, follow them, and send a message request to start chatting.',
+                    actionLabel: _searchQuery.isEmpty && !_showGroups
+                        ? 'Find People'
+                        : null,
+                    onAction: _searchQuery.isEmpty && !_showGroups
+                        ? _openPeopleSearch
+                        : null,
                   );
                 }
                 return RefreshIndicator(
                   color: AppColors.primary,
-                  onRefresh: () => p.loadConversations(refresh: true),
+                  onRefresh: () async {
+                    await p.loadConversations(refresh: true);
+                    if (_showGroups) await p.loadGroupConversations();
+                  },
                   child: ListView.builder(
                     itemCount: list.length,
                     itemBuilder: (_, i) {
@@ -243,6 +286,45 @@ class _ChatsScreenState extends State<ChatsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ChatUserSearchScreen()),
+    );
+  }
+}
+
+class _TabChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: AppFonts.dmSans,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }

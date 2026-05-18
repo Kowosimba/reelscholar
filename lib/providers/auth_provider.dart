@@ -230,16 +230,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _faculties = await _service.getFaculties();
     } catch (_) {
-      // Use fallback defaults if API fails
-      _faculties = [
-        'Engineering & Technology',
-        'Business & Management',
-        'Sciences',
-        'Humanities & Social Sciences',
-        'Health Sciences',
-        'Education',
-        'Law',
-      ];
+      _faculties = [];
     } finally {
       _isLoadingMetadata = false;
       notifyListeners();

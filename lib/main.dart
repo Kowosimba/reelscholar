@@ -18,7 +18,10 @@ import 'core/services/hackathon_service.dart';
 import 'providers/hackathon_provider.dart';
 import 'core/services/progress_service.dart';
 import 'providers/progress_provider.dart';
+import 'providers/flashcard_provider.dart';
+import 'providers/voice_call_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/notification_provider.dart';
 import 'core/constants/app_colors.dart';
 import 'app_router.dart';
 
@@ -51,6 +54,9 @@ class ReelScholarApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SocialProvider(SocialService())),
         ChangeNotifierProvider(create: (_) => HackathonProvider(HackathonService())),
         ChangeNotifierProvider(create: (_) => ProgressProvider(ProgressService())),
+        ChangeNotifierProvider(create: (_) => FlashcardProvider()),
+        ChangeNotifierProvider(create: (_) => VoiceCallProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProxyProvider<AuthProvider, MessagingProvider>(
           create: (_) => MessagingProvider(MessagingService()),
           update: (_, auth, previous) {

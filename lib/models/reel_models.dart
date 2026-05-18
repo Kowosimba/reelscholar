@@ -12,12 +12,28 @@ class ReelUploader {
     required this.isFollowing,
   });
 
-  factory ReelUploader.fromJson(Map<String, dynamic> j) => ReelUploader(
-    uid: j['uid'] as String? ?? '',
-    fullName: (j['full_name'] ?? j['name'] ?? j['display_name'] ?? j['username'] ?? '') as String,
-    profilePicUrl: j['profile_pic_url'] as String?,
-    isFollowing: j['is_following'] as bool? ?? false,
-  );
+  factory ReelUploader.fromJson(Map<String, dynamic> j) {
+    // Log available keys so we can see exactly what the API returns
+    assert(() {
+      // ignore: avoid_print
+      print('[ReelUploader] keys from API: ${j.keys.toList()}  values: $j');
+      return true;
+    }());
+    final uid = j['uid'] as String?
+        ?? j['firebase_uid'] as String?
+        ?? j['user_uid'] as String?
+        ?? j['creator_uid'] as String?
+        ?? j['id']?.toString()
+        ?? j['user_id']?.toString()
+        ?? j['creator_id']?.toString()
+        ?? '';
+    return ReelUploader(
+      uid: uid,
+      fullName: (j['full_name'] ?? j['name'] ?? j['display_name'] ?? j['username'] ?? '') as String,
+      profilePicUrl: j['profile_pic_url'] as String? ?? j['avatar'] as String? ?? j['profile_picture'] as String?,
+      isFollowing: j['is_following'] as bool? ?? false,
+    );
+  }
 
   String get initials {
     final parts = fullName.trim().split(' ');
@@ -26,6 +42,13 @@ class ReelUploader {
     }
     return fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
   }
+
+  ReelUploader copyWith({bool? isFollowing}) => ReelUploader(
+    uid: uid,
+    fullName: fullName,
+    profilePicUrl: profilePicUrl,
+    isFollowing: isFollowing ?? this.isFollowing,
+  );
 }
 
 // ─── Topic (embedded in ReelResource) ─────────────────────────────────────────
@@ -150,6 +173,7 @@ class Reel {
   }
 
   Reel copyWith({
+    ReelUploader? uploader,
     bool? isLiked,
     bool? isBookmarked,
     int? likeCount,
@@ -159,7 +183,7 @@ class Reel {
     int? shareCount,
   }) => Reel(
     id: id,
-    uploader: uploader,
+    uploader: uploader ?? this.uploader,
     videoUrl: videoUrl,
     thumbnailUrl: thumbnailUrl,
     caption: caption,
@@ -241,9 +265,14 @@ class CommentUser {
   });
 
   factory CommentUser.fromJson(Map<String, dynamic> j) => CommentUser(
-    uid: j['uid'] as String? ?? '',
+    uid: j['uid'] as String?
+        ?? j['firebase_uid'] as String?
+        ?? j['user_uid'] as String?
+        ?? j['id']?.toString()
+        ?? j['user_id']?.toString()
+        ?? '',
     fullName: (j['full_name'] ?? j['name'] ?? j['display_name'] ?? j['username'] ?? '') as String,
-    profilePicUrl: j['profile_pic_url'] as String?,
+    profilePicUrl: j['profile_pic_url'] as String? ?? j['avatar'] as String?,
   );
 
   String get initials {

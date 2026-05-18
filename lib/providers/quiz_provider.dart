@@ -183,4 +183,119 @@ class QuizProvider extends ChangeNotifier {
       return null;
     }
   }
+
+  // ── Tutor quiz (prefixed to avoid clashing with existing quiz flow) ──
+
+  Quiz? _tutorQuiz;
+  int _tutorCurrentIndex = 0;
+  final Map<String, int> _tutorAnswers = {};
+  final Set<String> _tutorRevealed = {};
+  TutorQuizAttempt? _tutorResult;
+  bool _tutorSubmitting = false;
+  bool _tutorLoading = false;
+  String? _tutorError;
+  DateTime? _tutorStartedAt;
+
+  Quiz? get tutorQuiz => _tutorQuiz;
+  int get tutorCurrentIndex => _tutorCurrentIndex;
+  Map<String, int> get tutorAnswers => Map.unmodifiable(_tutorAnswers);
+  Set<String> get tutorRevealed => Set.unmodifiable(_tutorRevealed);
+  TutorQuizAttempt? get attemptResult => _tutorResult;
+  bool get tutorSubmitting => _tutorSubmitting;
+  bool get tutorLoading => _tutorLoading;
+  String? get tutorError => _tutorError;
+
+  QuizQuestion? get tutorCurrentQuestion {
+    if (_tutorQuiz == null || _tutorCurrentIndex >= _tutorQuiz!.questions.length) {
+      return null;
+    }
+    return _tutorQuiz!.questions[_tutorCurrentIndex];
+  }
+
+  bool get tutorIsLastQuestion =>
+      _tutorQuiz != null &&
+      _tutorCurrentIndex >= _tutorQuiz!.questions.length - 1;
+
+  int get tutorElapsedSeconds => _tutorStartedAt == null
+      ? 0
+      : DateTime.now().difference(_tutorStartedAt!).inSeconds;
+
+  Future<void> startTutorQuiz(String quizId) async {
+    _tutorLoading = true;
+    _tutorError = null;
+    _tutorQuiz = null;
+    _tutorCurrentIndex = 0;
+    _tutorAnswers.clear();
+    _tutorRevealed.clear();
+    _tutorResult = null;
+    _tutorStartedAt = null;
+    notifyListeners();
+    try {
+      _tutorQuiz = await _service.getTutorQuiz(quizId);
+      _tutorStartedAt = DateTime.now();
+    } catch (e) {
+      _tutorError = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _tutorLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void tutorSelect(String questionId, int index) {
+    if (_tutorRevealed.contains(questionId)) return;
+    _tutorAnswers[questionId] = index;
+    notifyListeners();
+  }
+
+  void tutorConfirm() {
+    final q = tutorCurrentQuestion;
+    if (q == null) return;
+    _tutorRevealed.add(q.id);
+    notifyListeners();
+  }
+
+  void tutorNext() {
+    if (_tutorQuiz == null) return;
+    if (_tutorCurrentIndex < _tutorQuiz!.questions.length - 1) {
+      _tutorCurrentIndex++;
+      notifyListeners();
+    }
+  }
+
+  Future<void> tutorSubmit() async {
+    if (_tutorQuiz == null) return;
+    _tutorSubmitting = true;
+    notifyListeners();
+
+    final answerPayload = _tutorQuiz!.questions.map((q) => {
+      'question_id': q.id,
+      'selected_index': _tutorAnswers[q.id] ?? 0,
+    }).toList();
+
+    try {
+      _tutorResult = await _service.submitTutorQuiz(
+        quizId: _tutorQuiz!.id,
+        answers: answerPayload,
+        timeTakenSeconds: tutorElapsedSeconds,
+      );
+    } catch (e) {
+      _tutorError = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _tutorSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  void resetTutorQuiz() {
+    _tutorQuiz = null;
+    _tutorCurrentIndex = 0;
+    _tutorAnswers.clear();
+    _tutorRevealed.clear();
+    _tutorResult = null;
+    _tutorSubmitting = false;
+    _tutorLoading = false;
+    _tutorError = null;
+    _tutorStartedAt = null;
+    notifyListeners();
+  }
 }

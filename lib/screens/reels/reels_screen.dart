@@ -113,7 +113,7 @@ class _ReelsScreenState extends State<ReelsScreen>
                   isActive: isReelsTab && i == _currentPage,
                   onProfileTap: () => Navigator.pushNamed(
                     context,
-                    '/profile',
+                    '/public-profile',
                     arguments: reels[i].uploader.uid,
                   ),
                   onHashtagTap: () => Navigator.pushNamed(

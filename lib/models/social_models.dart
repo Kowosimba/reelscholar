@@ -60,7 +60,11 @@ class AppUser {
   }
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
-        uid: j['uid'] as String? ?? j['id'] as String? ?? '',
+        uid: j['uid'] as String?
+            ?? j['firebase_uid'] as String?
+            ?? j['id']?.toString()
+            ?? j['user_id']?.toString()
+            ?? '',
         fullName: j['full_name'] as String? ?? j['name'] as String? ?? 'Unknown',
         studentId: j['student_id'] as String?,
         faculty: j['faculty'] as String?,

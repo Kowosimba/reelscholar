@@ -443,6 +443,22 @@ class ReelProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Uploader follow state sync ──────────────────────────────────────────────
+  void updateUploaderFollowState(String uploaderUid, bool isFollowing) {
+    for (final type in FeedType.values) {
+      final list = _feeds[type];
+      if (list == null) continue;
+      for (int i = 0; i < list.length; i++) {
+        if (list[i].uploader.uid == uploaderUid) {
+          list[i] = list[i].copyWith(
+            uploader: list[i].uploader.copyWith(isFollowing: isFollowing),
+          );
+        }
+      }
+    }
+    notifyListeners();
+  }
+
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   void _updateReel(String id, Reel Function(Reel) update) {
     for (final type in FeedType.values) {

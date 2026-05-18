@@ -93,26 +93,18 @@ class ReelActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? (activeColor ?? AppColors.primary) : AppColors.textPrimary;
+    final color = isActive ? (activeColor ?? AppColors.primary) : Colors.white;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.94),
+              color: Colors.black.withValues(alpha: 0.22),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x160F172A),
-                  blurRadius: 16,
-                  offset: Offset(0, 8),
-                ),
-              ],
             ),
             child: Center(
               child: AnimatedSwitcher(
@@ -124,11 +116,12 @@ class ReelActionButton extends StatelessWidget {
                   key: ValueKey(isActive),
                   size: 26,
                   color: color,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: Text(
@@ -136,7 +129,7 @@ class ReelActionButton extends StatelessWidget {
               key: ValueKey('$label-$isActive'),
               style: const TextStyle(
                 fontFamily: 'DM Sans',
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
                 shadows: [Shadow(color: Colors.black45, blurRadius: 6)],

@@ -10,14 +10,17 @@ import 'package:reelscholar/providers/messaging_provider.dart';
 import 'package:reelscholar/screens/study_groups/study_group_detail_screen.dart';
 
 class ChatThreadScreen extends StatefulWidget {
-  final String conversationId;
+  final String? conversationId;
   final String? groupId;
+  final String? groupName;
 
   const ChatThreadScreen({
     super.key,
-    required this.conversationId,
+    this.conversationId,
     this.groupId,
-  });
+    this.groupName,
+  }) : assert(conversationId != null || groupId != null,
+            'Either conversationId or groupId must be provided');
 
   @override
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -36,8 +39,16 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     _scrollCtrl.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (_messaging.activeConversation?.id != widget.conversationId) {
-        _messaging.openConversationById(widget.conversationId);
+      final convId = widget.conversationId;
+      final groupId = widget.groupId;
+      if (convId != null) {
+        if (_messaging.activeConversation?.id != convId) {
+          _messaging.openConversationById(convId);
+        }
+      } else if (groupId != null) {
+        if (_messaging.activeConversation?.studyGroupId != groupId) {
+          _messaging.openStudyGroupChat(groupId, widget.groupName ?? 'Group Chat');
+        }
       }
     });
   }
@@ -1058,12 +1069,14 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
+    return SafeArea(
+      top: false,
+      child: Container(
+      padding: const EdgeInsets.only(
         left: 12,
         right: 12,
         top: 10,
-        bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 10 : 18,
+        bottom: 10,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1133,6 +1146,7 @@ class _InputBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

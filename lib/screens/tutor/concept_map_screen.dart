@@ -1,29 +1,44 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/tutor_provider.dart';
-import 'package:reelscholar/models/tutor_models.dart';
+import 'package:reelscholar/models/concept_map_models.dart';
+import 'package:reelscholar/services/concept_map_service.dart';
 import 'widgets/tutor_widgets.dart';
 
+/// Force-directed concept map renderer.
+///
+/// Layout: Fruchterman-Reingold with 220 iterations on screen init.
+/// Pan and zoom with InteractiveViewer. Tap a node to see its description.
 class ConceptMapScreen extends StatefulWidget {
-  final TutorModule module;
+  final String moduleId;
+  final String moduleName;
 
-  const ConceptMapScreen({super.key, required this.module});
+  const ConceptMapScreen({
+    super.key,
+    required this.moduleId,
+    required this.moduleName,
+  });
 
   @override
   State<ConceptMapScreen> createState() => _ConceptMapScreenState();
 }
 
 class _ConceptMapScreenState extends State<ConceptMapScreen> {
-  final TransformationController _transformCtrl = TransformationController();
-  ConceptNode? _selectedNode;
+  ConceptMap? _map;
+  Map<String, Offset> _positions = {};
+  bool _loading = true;
+  String? _error;
+  String? _selectedNodeId;
+  NodeKind? _filterKind;
+  late final TransformationController _transformCtrl;
+
+  static const double _canvasW = 1200;
+  static const double _canvasH = 1200;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TutorProvider>().loadConceptMap(widget.module.moduleId);
-    });
+    _transformCtrl = TransformationController();
+    _load();
   }
 
   @override
@@ -32,559 +47,763 @@ class _ConceptMapScreenState extends State<ConceptMapScreen> {
     super.dispose();
   }
 
-  void _resetView() {
-    _transformCtrl.value = Matrix4.identity();
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final map = await ConceptMapService().get(widget.moduleId);
+      _map = map;
+      _positions = _layoutForceDirected(map);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final size = MediaQuery.of(context).size;
+        final scale = (size.shortestSide / _canvasW).clamp(0.2, 0.75);
+        _transformCtrl.value = Matrix4.diagonal3Values(scale, scale, 1.0);
+      });
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: TColors.textPrimary,
-            size: 20,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Concept Map',
-              style: TextStyle(
-                fontFamily: 'Sora',
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: TColors.textPrimary,
-              ),
-            ),
-            Text(
-              widget.module.name,
-              style: const TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 11,
-                color: TColors.textTertiary,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.center_focus_strong_rounded,
-              color: TColors.textSecondary,
-              size: 22,
-            ),
-            tooltip: 'Reset view',
-            onPressed: _resetView,
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.share_outlined,
-              color: TColors.textSecondary,
-              size: 22,
-            ),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Consumer<TutorProvider>(
-        builder: (_, prov, _) {
-          if (prov.conceptMapState == TutorLoadState.loading) {
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(
-                    color: TColors.primary,
-                    strokeWidth: 2.5,
-                  ),
-                  SizedBox(height: 14),
-                  Text(
-                    'Building concept map…',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 13,
-                      color: TColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (prov.conceptMapState == TutorLoadState.error) {
-            return TutorEmptyState(
-              icon: Icons.account_tree_outlined,
-              title: 'Could not load concept map',
-              subtitle: 'Start a tutor session to generate your concept map',
-              actionLabel: 'Retry',
-              onAction: () => prov.loadConceptMap(widget.module.moduleId),
-            );
-          }
-
-          final map = prov.conceptMapFor(widget.module.moduleId);
-          if (map == null || map.nodes.isEmpty) {
-            return TutorEmptyState(
-              icon: Icons.account_tree_outlined,
-              title: 'No concept map yet',
-              subtitle:
-                  'Complete topics with your AI tutor to build your personalised concept map',
-            );
-          }
-
-          return Stack(
-            children: [
-              // ── Subtitle pill ───────────────────────────────────────────
-              Positioned(
-                top: 8,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: TColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '${widget.module.name} · Generated by AI',
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: TColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Graph canvas ────────────────────────────────────────────
-              Positioned.fill(
-                top: 44,
-                child: InteractiveViewer(
-                  transformationController: _transformCtrl,
-                  minScale: 0.4,
-                  maxScale: 3.0,
-                  boundaryMargin: const EdgeInsets.all(200),
-                  child: SizedBox(
-                    width: 900,
-                    height: 700,
-                    child: CustomPaint(
-                      painter: _ConceptMapPainter(
-                        nodes: map.nodes,
-                        edges: map.edges,
-                        selectedNodeId: _selectedNode?.id,
-                      ),
-                      child: Stack(children: [..._buildNodeWidgets(map)]),
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Node detail sheet ───────────────────────────────────────
-              if (_selectedNode != null)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _NodeDetailSheet(
-                    node: _selectedNode!,
-                    onClose: () => setState(() => _selectedNode = null),
-                  ),
-                ),
-
-              // ── Zoom hint ───────────────────────────────────────────────
-              Positioned(
-                bottom: _selectedNode != null ? 190 : 20,
-                right: 16,
-                child: Column(
-                  children: [
-                    _ZoomButton(
-                      icon: Icons.add_rounded,
-                      onTap: () {
-                        final m = _transformCtrl.value.clone();
-                        m.scaleByDouble(1.2, 1.2, 1.0, 1.0);
-                        _transformCtrl.value = m;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _ZoomButton(
-                      icon: Icons.remove_rounded,
-                      onTap: () {
-                        final m = _transformCtrl.value.clone();
-                        m.scaleByDouble(0.8, 0.8, 1.0, 1.0);
-                        _transformCtrl.value = m;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  Future<void> _regenerate() async {
+    setState(() => _loading = true);
+    try {
+      final map = await ConceptMapService().regenerate(widget.moduleId);
+      _map = map;
+      _positions = _layoutForceDirected(map);
+      _selectedNodeId = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
-  List<Widget> _buildNodeWidgets(ConceptMap map) {
-    final positions = _layoutNodes(map.nodes);
-    return map.nodes.asMap().entries.map((entry) {
-      final node = entry.value;
-      final pos = positions[entry.key];
-      return Positioned(
-        left: pos.dx - 55,
-        top: pos.dy - 28,
-        child: GestureDetector(
-          onTap: () => setState(
-            () => _selectedNode = _selectedNode?.id == node.id ? null : node,
-          ),
-          child: _NodeWidget(
-            node: node,
-            isSelected: _selectedNode?.id == node.id,
-          ),
-        ),
-      );
-    }).toList();
-  }
+  Map<String, Offset> _layoutForceDirected(ConceptMap map) {
+    final rng = math.Random(42);
+    final positions = <String, Offset>{};
+    final disp = <String, Offset>{};
 
-  /// Simple radial layout: root at centre, children in rings
-  List<Offset> _layoutNodes(List<ConceptNode> nodes) {
-    const cx = 450.0;
-    const cy = 350.0;
-    if (nodes.isEmpty) return [];
-    if (nodes.length == 1) return [const Offset(cx, cy)];
-
-    final positions = <Offset>[];
-    // Root node at centre
-    positions.add(const Offset(cx, cy));
-
-    // Remaining nodes in concentric rings
-    final remaining = nodes.length - 1;
-    const ring1Count = 6;
-    final ring1 = math.min(remaining, ring1Count);
-    final ring2 = remaining - ring1;
-
-    for (int i = 0; i < ring1; i++) {
-      final angle = (2 * math.pi / ring1) * i - math.pi / 2;
-      positions.add(
-        Offset(cx + 180 * math.cos(angle), cy + 160 * math.sin(angle)),
+    for (final node in map.nodes) {
+      positions[node.id] = Offset(
+        rng.nextDouble() * _canvasW,
+        rng.nextDouble() * _canvasH,
       );
     }
-    for (int i = 0; i < ring2; i++) {
-      final angle = (2 * math.pi / (ring2 == 0 ? 1 : ring2)) * i - math.pi / 4;
-      positions.add(
-        Offset(cx + 340 * math.cos(angle), cy + 300 * math.sin(angle)),
-      );
+
+    if (map.nodes.isEmpty) return positions;
+
+    final area = _canvasW * _canvasH;
+    final k = math.sqrt(area / map.nodes.length);
+    double temperature = _canvasW / 10;
+    const iterations = 220;
+
+    for (int i = 0; i < iterations; i++) {
+      for (final n in map.nodes) {
+        disp[n.id] = Offset.zero;
+      }
+
+      // Repulsive forces
+      for (final v in map.nodes) {
+        for (final u in map.nodes) {
+          if (u.id == v.id) continue;
+          final delta = positions[v.id]! - positions[u.id]!;
+          final dist = math.max(delta.distance, 0.01);
+          final force = (k * k) / dist;
+          disp[v.id] = disp[v.id]! + (delta / dist) * force;
+        }
+      }
+
+      // Attractive forces along edges
+      for (final e in map.edges) {
+        final pFrom = positions[e.from];
+        final pTo = positions[e.to];
+        if (pFrom == null || pTo == null) continue;
+        final delta = pFrom - pTo;
+        final dist = math.max(delta.distance, 0.01);
+        final force = (dist * dist) / k;
+        final pull = (delta / dist) * force;
+        disp[e.from] = disp[e.from]! - pull;
+        disp[e.to] = disp[e.to]! + pull;
+      }
+
+      // Apply with temperature-limited step
+      for (final n in map.nodes) {
+        final d = disp[n.id]!;
+        final dist = math.max(d.distance, 0.01);
+        final capped = (d / dist) * math.min(dist, temperature);
+        var p = positions[n.id]! + capped;
+        p = Offset(
+          p.dx.clamp(60.0, _canvasW - 60),
+          p.dy.clamp(60.0, _canvasH - 60),
+        );
+        positions[n.id] = p;
+      }
+
+      temperature = math.max(temperature * 0.96, 0.5);
     }
+
     return positions;
   }
-}
-
-// ─── Node widget ──────────────────────────────────────────────────────────────
-class _NodeWidget extends StatelessWidget {
-  final ConceptNode node;
-  final bool isSelected;
-
-  const _NodeWidget({required this.node, required this.isSelected});
 
   @override
   Widget build(BuildContext context) {
-    final isRoot = node.type == 'module';
-    final color = isRoot ? TColors.primary : TColors.secondary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0A0D12) : const Color(0xFFF4F6FA);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      width: isRoot ? 130 : 110,
-      padding: EdgeInsets.symmetric(
-        horizontal: isRoot ? 14 : 10,
-        vertical: isRoot ? 10 : 8,
-      ),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? color
-            : isRoot
-            ? TColors.primarySubtle
-            : Colors.white,
-        borderRadius: BorderRadius.circular(isRoot ? 16 : 12),
-        border: Border.all(
-          color: isSelected ? color : color.withValues(alpha: 0.4),
-          width: isSelected ? 2 : 1.5,
+    return Scaffold(
+      backgroundColor: bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _Header(
+              title: widget.moduleName,
+              subtitle: _map?.title ?? 'Concept map',
+              onClose: () => Navigator.of(context).pop(),
+              onRegenerate: _loading ? null : _regenerate,
+              isDark: isDark,
+            ),
+            _FilterBar(
+              current: _filterKind,
+              onChange: (k) => setState(() => _filterKind = k),
+              isDark: isDark,
+            ),
+            Expanded(child: _buildBody(isDark)),
+            if (_selectedNodeId != null && _map != null)
+              _NodeDetailPanel(
+                node: _map!.nodes.firstWhere(
+                  (n) => n.id == _selectedNodeId,
+                  orElse: () => _map!.nodes.first,
+                ),
+                edges: _map!.edges
+                    .where((e) =>
+                        e.from == _selectedNodeId || e.to == _selectedNodeId)
+                    .toList(),
+                nodeLookup: {for (final n in _map!.nodes) n.id: n.label},
+                onClose: () => setState(() => _selectedNodeId = null),
+                isDark: isDark,
+              ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isSelected ? 0.3 : 0.1),
-            blurRadius: isSelected ? 12 : 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Text(
-        node.label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: 'DM Sans',
-          fontSize: isRoot ? 12 : 11,
-          fontWeight: isRoot ? FontWeight.w800 : FontWeight.w600,
-          color: isSelected
-              ? Colors.white
-              : isRoot
-              ? TColors.primary
-              : TColors.textPrimary,
-          height: 1.3,
-        ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
+
+  Widget _buildBody(bool isDark) {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: TColors.primary,
+          strokeWidth: 2.5,
+        ),
+      );
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 48, color: Color(0xFFEF4444)),
+              const SizedBox(height: 12),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+    if (_map == null || _map!.nodes.isEmpty) {
+      return const Center(child: Text('No concept map available'));
+    }
+
+    return InteractiveViewer(
+      constrained: false,
+      transformationController: _transformCtrl,
+      minScale: 0.15,
+      maxScale: 4,
+      boundaryMargin: const EdgeInsets.all(500),
+      child: SizedBox(
+        width: _canvasW,
+        height: _canvasH,
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: const Size(_canvasW, _canvasH),
+              painter: _EdgesPainter(
+                edges: _map!.edges,
+                positions: _positions,
+                filterKind: _filterKind,
+                nodeKinds: {for (final n in _map!.nodes) n.id: n.kind},
+                isDark: isDark,
+              ),
+            ),
+            ..._map!.nodes.map((node) {
+              final pos = _positions[node.id];
+              if (pos == null) return const SizedBox.shrink();
+              final dimmed = _filterKind != null && node.kind != _filterKind;
+              final r = _nodeRadius(node.importance);
+              return Positioned(
+                left: pos.dx - r,
+                top: pos.dy - r,
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedNodeId = node.id),
+                  child: _NodeChip(
+                    node: node,
+                    selected: _selectedNodeId == node.id,
+                    dimmed: dimmed,
+                    isDark: isDark,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static double _nodeRadius(int importance) => switch (importance) {
+        3 => 48,
+        2 => 40,
+        _ => 32,
+      };
 }
 
-// ─── Graph painter (draws edges) ──────────────────────────────────────────────
-class _ConceptMapPainter extends CustomPainter {
-  final List<ConceptNode> nodes;
-  final List<String> edges;
-  final String? selectedNodeId;
+// ── Edge painter ─────────────────────────────────────────────────────────
 
-  _ConceptMapPainter({
-    required this.nodes,
+class _EdgesPainter extends CustomPainter {
+  final List<ConceptEdge> edges;
+  final Map<String, Offset> positions;
+  final NodeKind? filterKind;
+  final Map<String, NodeKind> nodeKinds;
+  final bool isDark;
+
+  const _EdgesPainter({
     required this.edges,
-    this.selectedNodeId,
+    required this.positions,
+    required this.filterKind,
+    required this.nodeKinds,
+    required this.isDark,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const cx = 450.0;
-    const cy = 350.0;
-    if (nodes.isEmpty) return;
-
-    final positions = _layout(nodes, cx, cy);
-    final posMap = <String, Offset>{};
-    for (int i = 0; i < nodes.length; i++) {
-      posMap[nodes[i].id] = positions[i];
-    }
-
-    final paint = Paint()
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // Draw edges first
-    for (final edge in edges) {
-      final parts = edge.split('->').map((s) => s.trim()).toList();
-      if (parts.length != 2) continue;
-      final from = posMap[parts[0]];
-      final to = posMap[parts[1]];
+    for (final e in edges) {
+      final from = positions[e.from];
+      final to = positions[e.to];
       if (from == null || to == null) continue;
 
-      final isHighlighted =
-          parts[0] == selectedNodeId || parts[1] == selectedNodeId;
-      paint.color = isHighlighted
-          ? TColors.primary.withValues(alpha: 0.8)
-          : TColors.border;
-      paint.strokeWidth = isHighlighted ? 2 : 1.5;
+      final fromKind = nodeKinds[e.from];
+      final toKind = nodeKinds[e.to];
+      final dimmed =
+          filterKind != null && fromKind != filterKind && toKind != filterKind;
 
-      // Curved connector
-      final path = Path();
-      path.moveTo(from.dx, from.dy);
-      final ctrl = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2 - 30);
-      path.quadraticBezierTo(ctrl.dx, ctrl.dy, to.dx, to.dy);
-      canvas.drawPath(path, paint);
+      final baseColor = _edgeColor(e.relation);
+      final color = baseColor.withValues(alpha: dimmed ? 0.08 : 0.5);
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = dimmed ? 1.0 : 1.8
+        ..style = PaintingStyle.stroke;
 
-      // Arrow tip
-      _drawArrow(canvas, from, to, paint);
-    }
+      if (_isDashed(e.relation)) {
+        _drawDashed(canvas, from, to, paint);
+      } else {
+        canvas.drawLine(from, to, paint);
+      }
 
-    // Draw dots at node centres
-    for (int i = 0; i < nodes.length; i++) {
-      final pos = positions[i];
-      final dotPaint = Paint()
-        ..color = nodes[i].type == 'module'
-            ? TColors.primary
-            : TColors.secondary.withValues(alpha: 0.6)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(pos, 4, dotPaint);
+      if (!dimmed) _drawArrowHead(canvas, from, to, baseColor);
     }
   }
 
-  void _drawArrow(Canvas canvas, Offset from, Offset to, Paint paint) {
-    final angle = math.atan2(to.dy - from.dy, to.dx - from.dx);
-    const arrowLen = 8.0;
-    const arrowAngle = 0.4;
-    final tip = to;
-    final a1 = Offset(
-      tip.dx - arrowLen * math.cos(angle - arrowAngle),
-      tip.dy - arrowLen * math.sin(angle - arrowAngle),
-    );
-    final a2 = Offset(
-      tip.dx - arrowLen * math.cos(angle + arrowAngle),
-      tip.dy - arrowLen * math.sin(angle + arrowAngle),
-    );
-    canvas.drawLine(tip, a1, paint);
-    canvas.drawLine(tip, a2, paint);
+  Color _edgeColor(EdgeRelation r) => switch (r) {
+        EdgeRelation.isA => const Color(0xFF6366F1),
+        EdgeRelation.partOf => const Color(0xFF0EA5E9),
+        EdgeRelation.causes => const Color(0xFFEF4444),
+        EdgeRelation.dependsOn => const Color(0xFFF59E0B),
+        EdgeRelation.contrastsWith => const Color(0xFFEC4899),
+        EdgeRelation.exampleOf => const Color(0xFF14B8A6),
+        EdgeRelation.appliesTo => const Color(0xFF8B5CF6),
+        EdgeRelation.precedes => const Color(0xFF10B981),
+      };
+
+  bool _isDashed(EdgeRelation r) =>
+      r == EdgeRelation.contrastsWith || r == EdgeRelation.appliesTo;
+
+  void _drawDashed(Canvas canvas, Offset from, Offset to, Paint paint) {
+    const dashLen = 6.0;
+    const gapLen = 4.0;
+    final total = (to - from).distance;
+    if (total == 0) return;
+    final dir = (to - from) / total;
+    double covered = 0;
+    while (covered < total) {
+      final start = from + dir * covered;
+      final end = from + dir * math.min(covered + dashLen, total);
+      canvas.drawLine(start, end, paint);
+      covered += dashLen + gapLen;
+    }
   }
 
-  List<Offset> _layout(List<ConceptNode> nodes, double cx, double cy) {
-    if (nodes.isEmpty) return [];
-    if (nodes.length == 1) return [Offset(cx, cy)];
-    final positions = <Offset>[Offset(cx, cy)];
-    final remaining = nodes.length - 1;
-    const ring1Count = 6;
-    final ring1 = math.min(remaining, ring1Count);
-    final ring2 = remaining - ring1;
-    for (int i = 0; i < ring1; i++) {
-      final angle = (2 * math.pi / ring1) * i - math.pi / 2;
-      positions.add(
-        Offset(cx + 180 * math.cos(angle), cy + 160 * math.sin(angle)),
-      );
-    }
-    for (int i = 0; i < ring2; i++) {
-      final angle = (2 * math.pi / (ring2 == 0 ? 1 : ring2)) * i - math.pi / 4;
-      positions.add(
-        Offset(cx + 340 * math.cos(angle), cy + 300 * math.sin(angle)),
-      );
-    }
-    return positions;
+  void _drawArrowHead(Canvas canvas, Offset from, Offset to, Color color) {
+    final dir = to - from;
+    final len = dir.distance;
+    if (len == 0) return;
+    final unit = dir / len;
+    final tip = to - unit * 36;
+    final left = tip + Offset(-unit.dy, unit.dx) * 4 - unit * 6;
+    final right = tip + Offset(unit.dy, -unit.dx) * 4 - unit * 6;
+    final path = Path()
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(left.dx, left.dy)
+      ..lineTo(right.dx, right.dy)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_ConceptMapPainter old) =>
-      old.selectedNodeId != selectedNodeId || old.nodes.length != nodes.length;
+  bool shouldRepaint(_EdgesPainter old) =>
+      old.edges != edges ||
+      old.positions != positions ||
+      old.filterKind != filterKind;
 }
 
-// ─── Node detail sheet ────────────────────────────────────────────────────────
-class _NodeDetailSheet extends StatelessWidget {
-  final ConceptNode node;
-  final VoidCallback onClose;
+// ── Node chip ────────────────────────────────────────────────────────────
 
-  const _NodeDetailSheet({required this.node, required this.onClose});
+class _NodeChip extends StatelessWidget {
+  final ConceptNode node;
+  final bool selected;
+  final bool dimmed;
+  final bool isDark;
+
+  const _NodeChip({
+    required this.node,
+    required this.selected,
+    required this.dimmed,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 20,
-            offset: Offset(0, -4),
+    final (color, icon) = _kindStyle(node.kind);
+    final r = _ConceptMapScreenState._nodeRadius(node.importance);
+
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: dimmed ? 0.25 : 1,
+      child: Transform.scale(
+        scale: dimmed ? 0.9 : 1.0,
+        child: Container(
+          width: r * 2,
+          height: r * 2,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color, color.withValues(alpha: 0.75)],
+            ),
+            border: Border.all(
+              color: selected ? Colors.white : color.withValues(alpha: 0.3),
+              width: selected ? 3 : 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: selected ? 0.5 : 0.25),
+                blurRadius: selected ? 24 : 12,
+                spreadRadius: selected ? 4 : 0,
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(6),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: r * 0.32),
+              const SizedBox(height: 2),
+              Text(
+                node.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Sora',
+                  fontSize: r * 0.18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.05,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (Color, IconData) _kindStyle(NodeKind k) => switch (k) {
+        NodeKind.concept => (const Color(0xFF6366F1), Icons.lightbulb_rounded),
+        NodeKind.process => (const Color(0xFF10B981), Icons.sync_rounded),
+        NodeKind.principle => (const Color(0xFFEF4444), Icons.gavel_rounded),
+        NodeKind.example =>
+          (const Color(0xFFEC4899), Icons.format_quote_rounded),
+        NodeKind.tool => (const Color(0xFFF59E0B), Icons.build_rounded),
+        NodeKind.topic => (const Color(0xFF0EA5E9), Icons.bookmark_rounded),
+      };
+}
+
+// ── Header ───────────────────────────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onClose;
+  final VoidCallback? onRegenerate;
+  final bool isDark;
+
+  const _Header({
+    required this.title,
+    required this.subtitle,
+    required this.onClose,
+    required this.onRegenerate,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : const Color(0xFF111418);
+    final subColor = isDark
+        ? Colors.white.withValues(alpha: 0.6)
+        : Colors.black.withValues(alpha: 0.55);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onClose,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isDark ? TColors.darkCard : TColors.primarySubtle,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: isDark ? Colors.white70 : TColors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 11,
+                    color: subColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onRegenerate,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isDark ? TColors.darkCard : TColors.primarySubtle,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.refresh_rounded,
+                size: 18,
+                color: onRegenerate == null
+                    ? Colors.grey
+                    : (isDark ? Colors.white70 : TColors.primary),
+              ),
+            ),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
+    );
+  }
+}
+
+// ── Filter bar ───────────────────────────────────────────────────────────
+
+class _FilterBar extends StatelessWidget {
+  final NodeKind? current;
+  final ValueChanged<NodeKind?> onChange;
+  final bool isDark;
+
+  const _FilterBar({
+    required this.current,
+    required this.onChange,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SizedBox(
+        height: 32,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            _chip('All', null),
+            for (final kind in NodeKind.values) _chip(kind.label, kind),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String label, NodeKind? kind) {
+    final active = current == kind;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: () => onChange(kind),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: active
+                ? TColors.primary
+                : (isDark ? TColors.darkCard : Colors.white),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: active
+                  ? TColors.primary
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.05)),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: active
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : Colors.black87),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Node detail panel ────────────────────────────────────────────────────
+
+class _NodeDetailPanel extends StatelessWidget {
+  final ConceptNode node;
+  final List<ConceptEdge> edges;
+  final Map<String, String> nodeLookup;
+  final VoidCallback onClose;
+  final bool isDark;
+
+  const _NodeDetailPanel({
+    required this.node,
+    required this.edges,
+    required this.nodeLookup,
+    required this.onClose,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : const Color(0xFF111418);
+    final subColor = isDark
+        ? Colors.white.withValues(alpha: 0.65)
+        : Colors.black.withValues(alpha: 0.6);
+    final kindColor = _kindColor(node.kind);
+
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(maxHeight: 240),
+      decoration: BoxDecoration(
+        color: isDark ? TColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.05),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: node.type == 'module'
-                      ? TColors.primarySubtle
-                      : TColors.secondarySubtle,
+                  color: kindColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  node.type.toUpperCase(),
+                  node.kind.label,
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: node.type == 'module'
-                        ? TColors.primary
-                        : TColors.secondary,
+                    color: kindColor,
+                    letterSpacing: 0.4,
                   ),
                 ),
               ),
               const Spacer(),
               GestureDetector(
                 onTap: onClose,
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 20,
-                  color: TColors.textTertiary,
-                ),
+                child: Icon(Icons.close_rounded, size: 18, color: subColor),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             node.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Sora',
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
-              color: TColors.textPrimary,
+              color: textColor,
             ),
           ),
-          if (node.summary.isNotEmpty) ...[
-            const SizedBox(height: 8),
+          if (node.description.isNotEmpty) ...[
+            const SizedBox(height: 6),
             Text(
-              node.summary,
-              style: const TextStyle(
+              node.description,
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
-                color: TColors.textSecondary,
-                height: 1.5,
+                color: subColor,
+                height: 1.4,
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          if (edges.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'CONNECTIONS',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: subColor,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: edges.map((e) {
+                  final otherId = e.from == node.id ? e.to : e.from;
+                  final outgoing = e.from == node.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          outgoing
+                              ? Icons.arrow_forward_rounded
+                              : Icons.arrow_back_rounded,
+                          size: 14,
+                          color: subColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          e.relation.label,
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: subColor,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            nodeLookup[otherId] ?? otherId,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
-}
 
-// ─── Zoom button ──────────────────────────────────────────────────────────────
-class _ZoomButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ZoomButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: TColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Icon(icon, size: 20, color: TColors.textSecondary),
-      ),
-    );
-  }
+  Color _kindColor(NodeKind k) => switch (k) {
+        NodeKind.concept => const Color(0xFF6366F1),
+        NodeKind.process => const Color(0xFF10B981),
+        NodeKind.principle => const Color(0xFFEF4444),
+        NodeKind.example => const Color(0xFFEC4899),
+        NodeKind.tool => const Color(0xFFF59E0B),
+        NodeKind.topic => const Color(0xFF0EA5E9),
+      };
 }

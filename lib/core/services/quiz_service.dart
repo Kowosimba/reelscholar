@@ -109,4 +109,65 @@ class QuizService {
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return Quiz.fromJson(body['data'] as Map<String, dynamic>);
   }
+
+  /// GET /tutor/quizzes/{quiz}
+  Future<Quiz> getTutorQuiz(String quizId) async {
+    final res = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/tutor/quizzes/$quizId'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return Quiz.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// POST /tutor/modules/{moduleId}/quizzes/generate
+  Future<Quiz> generateTutorQuiz(String moduleId) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/quizzes/generate'),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 400) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      throw Exception(
+        body['message'] as String? ??
+            'Complete at least one topic before generating a quiz.',
+      );
+    }
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return Quiz.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// POST /tutor/quizzes/{quiz}/submit
+  Future<TutorQuizAttempt> submitTutorQuiz({
+    required String quizId,
+    required List<Map<String, dynamic>> answers,
+    int timeTakenSeconds = 0,
+  }) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/tutor/quizzes/$quizId/submit'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'answers': answers,
+        'time_taken_seconds': timeTakenSeconds,
+      }),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return TutorQuizAttempt.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// GET /tutor/modules/{moduleId}/quizzes
+  Future<List<Quiz>> listTutorQuizzes(String moduleId) async {
+    final res = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/tutor/modules/$moduleId/quizzes'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'];
+    List<dynamic> items = data is List ? data : (data as Map?)?['data'] as List? ?? [];
+    return items.map((i) => Quiz.fromJson(i as Map<String, dynamic>)).toList();
+  }
 }

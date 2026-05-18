@@ -1092,7 +1092,11 @@ class _ProfileReelViewerState extends State<_ProfileReelViewer> {
         itemBuilder: (_, i) => ReelPlayerItem(
           reel: widget.reels[i],
           isActive: i == _current,
-          onProfileTap: () => Navigator.pop(context),
+          onProfileTap: () => Navigator.pushNamed(
+            context,
+            '/public-profile',
+            arguments: widget.reels[i].uploader.uid,
+          ),
           onHashtagTap: () {},
         ),
       ),

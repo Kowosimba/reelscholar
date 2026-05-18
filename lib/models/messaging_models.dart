@@ -19,9 +19,9 @@ class MessageSender {
   });
 
   factory MessageSender.fromJson(Map<String, dynamic> j) => MessageSender(
-        uid: j['uid']?.toString() ?? '',
+        uid: j['uid']?.toString() ?? j['id']?.toString() ?? '',
         name: j['name']?.toString() ?? 'Unknown',
-        profilePic: j['profile_pic'] as String?,
+        profilePic: j['profile_pic'] as String? ?? j['profile_pic_url'] as String?,
       );
 }
 
@@ -248,6 +248,7 @@ class Conversation {
   final String? name;
   final String? description;
   final String? avatarUrl;
+  final String? studyGroupId;
   final ConversationParticipant? otherUser;
   final ConversationParticipant? creator;
   final List<ConversationParticipant> participants;
@@ -268,6 +269,7 @@ class Conversation {
     this.name,
     this.description,
     this.avatarUrl,
+    this.studyGroupId,
     this.otherUser,
     this.creator,
     required this.participants,
@@ -345,12 +347,19 @@ class Conversation {
                 ? 'group'
                 : 'direct';
 
+    final sgId = j['study_group_id']?.toString() ??
+        j['group_id']?.toString() ??
+        (j['study_group'] is Map<String, dynamic>
+            ? (j['study_group'] as Map<String, dynamic>)['id']?.toString()
+            : null);
+
     return Conversation(
       id: j['id']?.toString() ?? '',
       type: resolvedType,
       name: j['name'] as String?,
       description: j['description'] as String?,
       avatarUrl: j['avatar_url'] as String?,
+      studyGroupId: sgId,
       otherUser: otherUser,
       creator: creator,
       participants: participants,
@@ -387,6 +396,7 @@ class Conversation {
         name: name,
         description: description,
         avatarUrl: avatarUrl,
+        studyGroupId: studyGroupId,
         otherUser: otherUser,
         creator: creator,
         participants: participants,

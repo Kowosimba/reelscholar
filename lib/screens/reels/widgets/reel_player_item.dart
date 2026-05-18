@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
+import 'package:reelscholar/providers/social_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'reel_widgets.dart';
 import '../comments_sheet.dart';
@@ -122,6 +123,14 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
     }
   }
 
+  void _onFollow(Reel reel) {
+    final reelProv = context.read<ReelProvider>();
+    reelProv.updateUploaderFollowState(reel.uploader.uid, true);
+    context.read<SocialProvider>().toggleFollow(reel.uploader.uid).catchError((_) {
+      reelProv.updateUploaderFollowState(reel.uploader.uid, false);
+    });
+  }
+
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -206,6 +215,7 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
                   onShare: _onShare,
                   onBookmark: () => prov.toggleBookmark(reel.id),
                   onProfileTap: widget.onProfileTap,
+                  onFollowTap: () => _onFollow(reel),
                 ),
               ),
 
@@ -220,7 +230,7 @@ class _ReelPlayerItemState extends State<ReelPlayerItem>
                   children: [
                     _BottomInfo(
                       reel: reel,
-                      onFollowTap: () {},
+                      onFollowTap: () => _onFollow(reel),
                       onHashtagTap: widget.onHashtagTap,
                       onProfileTap: widget.onProfileTap,
                     ),
@@ -331,6 +341,7 @@ class _RightActions extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onBookmark;
   final VoidCallback? onProfileTap;
+  final VoidCallback? onFollowTap;
 
   const _RightActions({
     required this.reel,
@@ -339,6 +350,7 @@ class _RightActions extends StatelessWidget {
     required this.onShare,
     required this.onBookmark,
     this.onProfileTap,
+    this.onFollowTap,
   });
 
   @override
@@ -346,7 +358,7 @@ class _RightActions extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Avatar with follow +
+        // Avatar with conditional follow +
         GestureDetector(
           onTap: onProfileTap,
           child: Stack(
@@ -359,28 +371,32 @@ class _RightActions extends StatelessWidget {
                 size: 42,
                 hasBorder: true,
               ),
-              Positioned(
-                bottom: -8,
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    size: 12,
-                    color: AppColors.primary,
+              if (!reel.uploader.isFollowing)
+                Positioned(
+                  bottom: -8,
+                  child: GestureDetector(
+                    onTap: onFollowTap,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 1.5),
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        size: 12,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
 
-        const SizedBox(height: 22),
+        const SizedBox(height: 16),
 
         ReelActionButton(
           icon: Icons.favorite_border_rounded,
@@ -391,7 +407,7 @@ class _RightActions extends StatelessWidget {
           onTap: onLike,
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         ReelActionButton(
           icon: Icons.chat_bubble_outline_rounded,
@@ -399,7 +415,7 @@ class _RightActions extends StatelessWidget {
           onTap: onComment,
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         ReelActionButton(
           icon: Icons.reply_rounded,
@@ -407,7 +423,7 @@ class _RightActions extends StatelessWidget {
           onTap: onShare,
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         ReelActionButton(
           icon: Icons.bookmark_border_rounded,
@@ -463,7 +479,7 @@ class _BottomInfo extends StatelessWidget {
                     constraints: const BoxConstraints(maxWidth: 140),
                     child: Text(
                       reel.uploader.fullName.isNotEmpty
-                          ? '@${reel.uploader.fullName.replaceAll(' ', '_').toLowerCase()}'
+                          ? reel.uploader.fullName
                           : 'Unknown',
                       style: const TextStyle(
                         fontFamily: 'DM Sans',

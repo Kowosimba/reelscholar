@@ -63,11 +63,13 @@ class SocialService {
 
   // ── GET /users/{userId} ─────────────────────────────────────────────────
   Future<AppUser> getUser(String userId) async {
+    if (userId.isEmpty) throw Exception('User ID is missing');
     final res = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/users/$userId'), headers: await _headers());
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return AppUser.fromJson(body['data'] as Map<String, dynamic>);
+    final data = body['data'];
+    return AppUser.fromJson(data as Map<String, dynamic>);
   }
 
   // ── GET /users/suggestions ───────────────────────────────────────────────

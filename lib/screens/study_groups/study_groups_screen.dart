@@ -263,14 +263,11 @@ class _DiscoverTabState extends State<_DiscoverTab> {
   }
 
   void _openGroup(BuildContext ctx, StudyGroup g) {
-    if (g.isMember && g.conversationId != null) {
+    if (g.isMember) {
       Navigator.push(
         ctx,
         MaterialPageRoute(
-          builder: (_) => ChatThreadScreen(
-            conversationId: g.conversationId!,
-            groupId: g.id,
-          ),
+          builder: (_) => ChatThreadScreen(groupId: g.id, groupName: g.name),
         ),
       );
     } else {
@@ -316,24 +313,15 @@ class _MyGroupsTab extends StatelessWidget {
               showRole: true,
               onTap: () {
                 final g = p.myGroups[i];
-                if (g.conversationId != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatThreadScreen(
-                        conversationId: g.conversationId!,
-                        groupId: g.id,
-                      ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatThreadScreen(
+                      groupId: g.id,
+                      groupName: g.name,
                     ),
-                  );
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StudyGroupDetailScreen(groupId: g.id),
-                    ),
-                  );
-                }
+                  ),
+                );
               },
             ),
           ),

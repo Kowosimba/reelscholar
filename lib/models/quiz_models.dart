@@ -1,5 +1,41 @@
 import 'dart:convert';
 
+enum BloomLevel { remember, understand, apply, analyze }
+
+extension BloomLevelMeta on BloomLevel {
+  String get label => switch (this) {
+    BloomLevel.remember => 'Remember',
+    BloomLevel.understand => 'Understand',
+    BloomLevel.apply => 'Apply',
+    BloomLevel.analyze => 'Analyze',
+  };
+
+  static BloomLevel? fromString(String? s) => switch (s) {
+    'remember' => BloomLevel.remember,
+    'understand' => BloomLevel.understand,
+    'apply' => BloomLevel.apply,
+    'analyze' => BloomLevel.analyze,
+    _ => null,
+  };
+}
+
+enum QuizDifficulty { easy, medium, hard }
+
+extension QuizDifficultyMeta on QuizDifficulty {
+  String get label => switch (this) {
+    QuizDifficulty.easy => 'Easy',
+    QuizDifficulty.medium => 'Medium',
+    QuizDifficulty.hard => 'Hard',
+  };
+
+  static QuizDifficulty? fromString(String? s) => switch (s) {
+    'easy' => QuizDifficulty.easy,
+    'medium' => QuizDifficulty.medium,
+    'hard' => QuizDifficulty.hard,
+    _ => null,
+  };
+}
+
 class QuizQuestion {
   final String id;
   final int order;
@@ -7,6 +43,10 @@ class QuizQuestion {
   final List<String> options;
   final String? explanation;
   final int? correctIndex;
+  final BloomLevel? bloomLevel;
+  final QuizDifficulty? quizDifficulty;
+  final String? topicTitle;
+  final int? topicIndex;
 
   const QuizQuestion({
     required this.id,
@@ -15,6 +55,10 @@ class QuizQuestion {
     required this.options,
     this.explanation,
     this.correctIndex,
+    this.bloomLevel,
+    this.quizDifficulty,
+    this.topicTitle,
+    this.topicIndex,
   });
 
   factory QuizQuestion.fromJson(Map<String, dynamic> json) {
@@ -38,6 +82,12 @@ class QuizQuestion {
       explanation: json['explanation']?.toString(),
       correctIndex: json['correct_index'] != null
           ? int.tryParse(json['correct_index'].toString())
+          : null,
+      bloomLevel: BloomLevelMeta.fromString(json['bloom_level']?.toString()),
+      quizDifficulty: QuizDifficultyMeta.fromString(json['difficulty']?.toString()),
+      topicTitle: json['topic_title']?.toString(),
+      topicIndex: json['topic_index'] != null
+          ? int.tryParse(json['topic_index'].toString())
           : null,
     );
   }
@@ -239,10 +289,73 @@ class QuizSuggestion {
   });
 
   factory QuizSuggestion.fromJson(Map<String, dynamic> json) {
+    final rawQ = json['questions'];
+    String questionsStr;
+    if (rawQ is List) {
+      questionsStr = rawQ.length.toString();
+    } else if (rawQ is int) {
+      questionsStr = rawQ.toString();
+    } else {
+      // Fall back to question_count (used by the Quiz model) or zero
+      final rawCount = json['question_count'];
+      questionsStr = rawCount?.toString() ?? rawQ?.toString() ?? '0';
+    }
     return QuizSuggestion(
-      quizId: json['quiz_id']?.toString() ?? '',
+      quizId: json['quiz_id']?.toString() ?? json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Quiz',
-      questions: json['questions']?.toString() ?? '0',
+      questions: questionsStr,
     );
+  }
+}
+
+class TutorQuizAttempt {
+  final String id;
+  final int score;
+  final int total;
+  final double percentage;
+  final int timeTakenSeconds;
+  final Map<String, Map<String, dynamic>> breakdown;
+
+  const TutorQuizAttempt({
+    required this.id,
+    required this.score,
+    required this.total,
+    required this.percentage,
+    required this.timeTakenSeconds,
+    required this.breakdown,
+  });
+
+  factory TutorQuizAttempt.fromJson(Map<String, dynamic> json) {
+    final rawBreakdown = json['breakdown'];
+    final Map<String, Map<String, dynamic>> bd = {};
+    if (rawBreakdown is Map) {
+      rawBreakdown.forEach((k, v) {
+        if (v is Map) {
+          bd[k.toString()] = Map<String, dynamic>.from(v);
+        }
+      });
+    }
+    return TutorQuizAttempt(
+      id: json['id']?.toString() ?? '',
+      score: int.tryParse(json['score'].toString()) ?? 0,
+      total: int.tryParse(json['total'].toString()) ?? 0,
+      percentage: double.tryParse(json['percentage'].toString()) ?? 0.0,
+      timeTakenSeconds: int.tryParse(json['time_taken_seconds'].toString()) ?? 0,
+      breakdown: bd,
+    );
+  }
+
+  Map<String, ({int correct, int total})> bucket(String key) {
+    final section = breakdown[key];
+    if (section == null) return {};
+    final result = <String, ({int correct, int total})>{};
+    section.forEach((label, v) {
+      if (v is Map) {
+        final correct = int.tryParse(v['correct'].toString()) ?? 0;
+        final tot = int.tryParse(v['total'].toString()) ?? 0;
+        result[label] = (correct: correct, total: tot);
+      }
+    });
+    return result;
   }
 }

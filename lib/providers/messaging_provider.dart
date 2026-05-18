@@ -35,6 +35,8 @@ class MessagingProvider extends ChangeNotifier {
       _isSelfTyping = false;
     }
     _activeConversation = null;
+    _activeStudyGroupId = null;
+    _sgNextCursor = null;
     _messages = [];
     _conversations = [];
     _requests = [];
@@ -100,6 +102,10 @@ class MessagingProvider extends ChangeNotifier {
   bool _hasMoreMessages = true;
   int _messagePage = 1;
 
+  // Study-group chat state (cursor-based pagination, different API)
+  String? _activeStudyGroupId;
+  String? _sgNextCursor;
+
   bool _remoteTyping = false;
   Timer? _typingDebounce;
   Timer? _typingTimeout;
@@ -116,6 +122,8 @@ class MessagingProvider extends ChangeNotifier {
   ConvMessage? get replyingTo => _replyingTo;
 
   Future<void> openConversation(Conversation conversation) async {
+    _activeStudyGroupId = null;
+    _sgNextCursor = null;
     _activeConversation = conversation;
     _messages = [];
     _messagePage = 1;
@@ -141,28 +149,66 @@ class MessagingProvider extends ChangeNotifier {
     await openConversation(conv);
   }
 
+  Future<void> openStudyGroupChat(String groupId, String groupName) async {
+    _activeStudyGroupId = groupId;
+    _sgNextCursor = null;
+    _activeConversation = Conversation(
+      id: groupId,
+      type: 'group',
+      name: groupName,
+      studyGroupId: groupId,
+      participants: [],
+      participantsCount: 0,
+      role: 'member',
+      isMuted: false,
+      unreadCount: 0,
+      anyoneCanMessage: true,
+      createdAt: DateTime.now(),
+    );
+    _messages = [];
+    _messagePage = 1;
+    _hasMoreMessages = true;
+    _replyingTo = null;
+    _remoteTyping = false;
+    notifyListeners();
+    await _loadMessages();
+  }
+
   Future<void> _loadMessages({bool append = false}) async {
     if (_activeConversation == null) return;
     _messagesLoading = true;
     _messagesError = null;
     if (!append) notifyListeners();
     try {
-      final page = append ? _messagePage : 1;
-      final result = await _service.getMessages(
-        _activeConversation!.id,
-        page: page,
-      );
-      _hasMoreMessages = result.currentPage < result.lastPage;
-      if (result.items.isEmpty) {
-        _hasMoreMessages = false;
-      } else {
+      if (_activeStudyGroupId != null) {
+        final result = await _service.getStudyGroupMessages(
+          _activeStudyGroupId!,
+          cursor: append ? _sgNextCursor : null,
+        );
+        _hasMoreMessages = result.hasMore;
+        _sgNextCursor = result.nextCursor;
         if (append) {
           _messages.addAll(result.items);
         } else {
           _messages = result.items;
         }
-        _messagePage = result.currentPage + 1;
-        _hasMoreMessages = result.currentPage < result.lastPage;
+      } else {
+        final page = append ? _messagePage : 1;
+        final result = await _service.getMessages(
+          _activeConversation!.id,
+          page: page,
+        );
+        if (result.items.isEmpty) {
+          _hasMoreMessages = false;
+        } else {
+          if (append) {
+            _messages.addAll(result.items);
+          } else {
+            _messages = result.items;
+          }
+          _messagePage = result.currentPage + 1;
+          _hasMoreMessages = result.currentPage < result.lastPage;
+        }
       }
     } catch (e) {
       _messagesError = e.toString().replaceFirst('Exception: ', '');
@@ -215,11 +261,20 @@ class MessagingProvider extends ChangeNotifier {
 
     try {
       await _stopTypingImmediate();
-      final sent = await _service.sendTextMessage(
-        convId,
-        text.trim(),
-        replyToMessageId: replyId,
-      );
+      final ConvMessage sent;
+      if (_activeStudyGroupId != null) {
+        sent = await _service.sendStudyGroupTextMessage(
+          _activeStudyGroupId!,
+          text.trim(),
+          replyToMessageId: replyId,
+        );
+      } else {
+        sent = await _service.sendTextMessage(
+          convId,
+          text.trim(),
+          replyToMessageId: replyId,
+        );
+      }
       final idx = _messages.indexWhere((m) => m.id == tempId);
       if (idx != -1) {
         _messages[idx] = sent;
@@ -317,6 +372,54 @@ class MessagingProvider extends ChangeNotifier {
   Future<void> toggleMute(String convId, bool mute) async {
     await _service.toggleMute(convId, mute: mute);
     await loadConversations(refresh: true);
+  }
+
+  // ── Group conversations ───────────────────────────────────────────────────
+  bool _groupConvsLoading = false;
+  bool get groupConvsLoading => _groupConvsLoading;
+
+  Future<void> loadGroupConversations() async {
+    if (_groupConvsLoading) return;
+    _groupConvsLoading = true;
+    notifyListeners();
+    try {
+      final groups = await _service.getStudyGroupConversations();
+      for (final g in groups) {
+        final idx = _conversations.indexWhere((c) => c.id == g.id);
+        if (idx == -1) {
+          _conversations.add(g);
+        } else {
+          _conversations[idx] = g;
+        }
+      }
+      _conversations.sort((a, b) {
+        final aT = a.lastMessageAt ?? DateTime(2000);
+        final bT = b.lastMessageAt ?? DateTime(2000);
+        return bT.compareTo(aT);
+      });
+    } catch (_) {
+      // Non-fatal — direct conversations still visible
+    } finally {
+      _groupConvsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Conversation> createGroup({
+    required String name,
+    required List<String> participantIds,
+    String? description,
+    bool anyoneCanMessage = true,
+  }) async {
+    final conv = await _service.createGroupConversation(
+      name: name,
+      participantIds: participantIds,
+      description: description,
+      anyoneCanMessage: anyoneCanMessage,
+    );
+    _conversations.insert(0, conv);
+    notifyListeners();
+    return conv;
   }
 
   List<MessageRequest> _requests = [];

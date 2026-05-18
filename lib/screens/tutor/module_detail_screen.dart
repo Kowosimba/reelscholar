@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/tutor_provider.dart';
+import 'package:reelscholar/providers/flashcard_provider.dart';
+import 'package:reelscholar/providers/voice_call_provider.dart';
 import 'package:reelscholar/models/tutor_models.dart';
 import 'widgets/tutor_widgets.dart';
 import 'tutor_chat_screen.dart';
-import 'flashcards_screen.dart';
 import 'concept_map_screen.dart';
-import 'voice_lesson_screen.dart';
+import 'flashcard_review_screen.dart';
+import 'voice_call_screen.dart';
 import 'session_history_screen.dart';
 import 'package:reelscholar/screens/quiz/quiz_suggestion_card.dart';
 import 'package:reelscholar/screens/quiz/quiz_attempts_screen.dart';
@@ -22,6 +24,7 @@ class ModuleDetailScreen extends StatefulWidget {
 
 class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   bool _isStarting = false;
+  bool _flashcardsLoading = false;
 
   TutorModule get module => widget.module;
 
@@ -377,9 +380,12 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                           _ToolCard(
                             icon: Icons.style_rounded,
                             label: 'Flashcards',
-                            subtitle: 'Test your memory',
+                            subtitle: _flashcardsLoading
+                                ? 'Generating cards…'
+                                : 'Test your memory',
                             color: const Color(0xFF6366F1),
                             onTap: _openFlashcards,
+                            isLoading: _flashcardsLoading,
                           ),
                           _ToolCard(
                             icon: Icons.account_tree_rounded,
@@ -389,11 +395,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                             onTap: _openConceptMap,
                           ),
                           _ToolCard(
-                            icon: Icons.headphones_rounded,
-                            label: 'Voice Lesson',
-                            subtitle: 'Audio script',
+                            icon: Icons.headset_mic_rounded,
+                            label: 'Voice Tutor',
+                            subtitle: 'Talk with AI',
                             color: const Color(0xFFF59E0B),
-                            onTap: _openVoiceLesson,
+                            onTap: _openVoiceCall,
                           ),
                           _ToolCard(
                             icon: Icons.history_edu_rounded,
@@ -494,32 +500,70 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     }
   }
 
-  void _openFlashcards() => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ChangeNotifierProvider.value(
-        value: context.read<TutorProvider>(),
-        child: FlashcardsScreen(module: module),
+  void _openFlashcards() async {
+    setState(() => _flashcardsLoading = true);
+    final prov = context.read<FlashcardProvider>();
+    await prov.loadDecks(module.moduleId);
+    if (!mounted) return;
+
+    if (prov.decks.isEmpty) {
+      await prov.generate(module.moduleId);
+      if (!mounted) return;
+      if (prov.error != null) {
+        setState(() => _flashcardsLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(prov.error!),
+            backgroundColor: TColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (prov.decks.isEmpty || !mounted) {
+      setState(() => _flashcardsLoading = false);
+      return;
+    }
+    final deck = prov.decks.first;
+    await prov.startSession(deck.id);
+    if (!mounted) return;
+    setState(() => _flashcardsLoading = false);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: prov,
+          child: FlashcardReviewScreen(
+            deckId: deck.id,
+            deckTitle: deck.title,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   void _openConceptMap() => Navigator.push(
     context,
-    MaterialPageRoute(
-      builder: (_) => ChangeNotifierProvider.value(
-        value: context.read<TutorProvider>(),
-        child: ConceptMapScreen(module: module),
+    MaterialPageRoute<void>(
+      builder: (_) => ConceptMapScreen(
+        moduleId: module.moduleId,
+        moduleName: module.name,
       ),
     ),
   );
 
-  void _openVoiceLesson() => Navigator.push(
+  void _openVoiceCall() => Navigator.push(
     context,
-    MaterialPageRoute(
+    MaterialPageRoute<void>(
       builder: (_) => ChangeNotifierProvider.value(
-        value: context.read<TutorProvider>(),
-        child: VoiceLessonScreen(module: module),
+        value: context.read<VoiceCallProvider>(),
+        child: VoiceCallScreen(
+          moduleId: module.moduleId,
+          moduleName: module.name,
+        ),
       ),
     ),
   );
@@ -542,6 +586,7 @@ class _ToolCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final bool isLoading;
 
   const _ToolCard({
     required this.icon,
@@ -549,16 +594,17 @@ class _ToolCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.07),
+          color: color.withValues(alpha: isLoading ? 0.04 : 0.07),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
@@ -573,7 +619,15 @@ class _ToolCard extends StatelessWidget {
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20, color: color),
+              child: isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: color,
+                      ),
+                    )
+                  : Icon(icon, size: 20, color: color),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,

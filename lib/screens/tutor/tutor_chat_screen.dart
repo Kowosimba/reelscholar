@@ -559,18 +559,15 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: TColors.white,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          10,
-          16,
-          10 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: TColors.border)),
-        ),
+    return SafeArea(
+      top: false,
+      child: Material(
+        color: TColors.white,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: TColors.border)),
+          ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -629,6 +626,7 @@ class _InputBar extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

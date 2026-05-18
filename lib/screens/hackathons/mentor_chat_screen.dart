@@ -146,8 +146,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           ),
 
           // Input
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          SafeArea(
+            top: false,
+            child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
             decoration: const BoxDecoration(
               color: Colors.white,
               border:
@@ -201,6 +203,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ],

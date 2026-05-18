@@ -31,7 +31,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   @override
   void dispose() {
-    _provider.clearProfile();
+    // clearProfile calls notifyListeners — defer past the current frame so it
+    // doesn't fire while the widget tree is locked during finalization.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _provider.clearProfile());
     super.dispose();
   }
 

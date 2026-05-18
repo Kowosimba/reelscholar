@@ -220,6 +220,98 @@ class MessagingService {
     _assertOk(res);
   }
 
+  /// POST /conversations/group
+  Future<Conversation> createGroupConversation({
+    required String name,
+    required List<String> participantIds,
+    String? description,
+    bool anyoneCanMessage = true,
+  }) async {
+    final payload = <String, dynamic>{
+      'name': name,
+      'participant_ids': participantIds,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      'anyone_can_message': anyoneCanMessage,
+    };
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/conversations/group'),
+      headers: await _headers(),
+      body: jsonEncode(payload),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return Conversation.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// GET /study-groups/{groupId}/messages  (cursor-based)
+  Future<({List<ConvMessage> items, String? nextCursor, bool hasMore})>
+      getStudyGroupMessages(
+    String groupId, {
+    String? cursor,
+    int perPage = 50,
+  }) async {
+    final params = <String, String>{'per_page': '$perPage'};
+    if (cursor != null) params['cursor'] = cursor;
+    final uri =
+        Uri.parse('${ApiConstants.baseUrl}/study-groups/$groupId/messages')
+            .replace(queryParameters: params);
+    final res = await http.get(uri, headers: await _headers());
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final raw = body['data'];
+    final List<dynamic> list = raw is List ? raw : [];
+    final meta = body['meta'] as Map<String, dynamic>? ?? {};
+    final items = list
+        .map((m) => ConvMessage.fromJson(m as Map<String, dynamic>))
+        .toList();
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final nextCursor = meta['next_cursor']?.toString();
+    final hasMore =
+        meta['has_more']?.toString() == 'true' || meta['has_more'] == true;
+    return (items: items, nextCursor: nextCursor, hasMore: hasMore);
+  }
+
+  /// POST /study-groups/{groupId}/messages/text
+  Future<ConvMessage> sendStudyGroupTextMessage(
+    String groupId,
+    String bodyText, {
+    String? replyToMessageId,
+  }) async {
+    final payload = <String, dynamic>{'body': bodyText};
+    if (replyToMessageId != null) {
+      payload['reply_to_message_id'] = replyToMessageId;
+    }
+    final res = await http.post(
+      Uri.parse(
+          '${ApiConstants.baseUrl}/study-groups/$groupId/messages/text'),
+      headers: await _headers(),
+      body: jsonEncode(payload),
+    );
+    _assertOk(res);
+    final rb = jsonDecode(res.body) as Map<String, dynamic>;
+    return ConvMessage.fromJson(rb['data'] as Map<String, dynamic>);
+  }
+
+  /// GET /conversations/study-groups
+  Future<List<Conversation>> getStudyGroupConversations({
+    int page = 1,
+    int perPage = 30,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/conversations/study-groups',
+    ).replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
+    final res = await http.get(uri, headers: await _headers());
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'];
+    final List<dynamic> list =
+        data is List ? data : (data as Map<String, dynamic>?)?['data'] as List? ?? [];
+    return list
+        .map((c) => Conversation.fromJson(c as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<void> startTyping(String conversationId) async {
     await http.post(
       Uri.parse(

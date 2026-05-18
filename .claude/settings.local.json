@@ -7,7 +7,15 @@
       "Bash(findstr -i api)",
       "Bash(node -e ' *)",
       "Bash(dir \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\" /B)",
-      "Bash(flutter pub *)"
+      "Bash(flutter pub *)",
+      "Bash(python -c \"import json; data=json.load\\(open\\('api.json'\\)\\); paths=[p for p in data['paths'] if 'group' in p.lower\\(\\) or 'conversation' in p.lower\\(\\) or 'message' in p.lower\\(\\)]; [print\\(p\\) for p in sorted\\(paths\\)]\")",
+      "Bash(node -e \"const d=require\\('./api.json'\\); const paths=Object.keys\\(d.paths\\).filter\\(p=>p.includes\\('group'\\)||p.includes\\('conversation'\\)||p.includes\\('message'\\)\\); paths.sort\\(\\).forEach\\(p=>console.log\\(p, Object.keys\\(d.paths[p]\\).join\\(','\\)\\)\\)\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\assets\\\\icon\")",
+      "PowerShell(head -30)",
+      "PowerShell(ls \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\android\\\\app\\\\src\\\\main\\\\\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(grep -E \"\\\\.dart$\")"
     ]
   }
 }

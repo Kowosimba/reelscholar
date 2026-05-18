@@ -1,10 +1,9 @@
-// lib/features/study_groups/screens/study_group_detail_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/study_group_provider.dart';
 import 'package:reelscholar/models/study_group_models.dart';
+import 'package:reelscholar/screens/messaging/chat_thread_screen.dart';
 import 'create_join_member_screens.dart';
 
 class StudyGroupDetailScreen extends StatefulWidget {
@@ -19,6 +18,7 @@ class StudyGroupDetailScreen extends StatefulWidget {
 
 class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen> {
   late final StudyGroupProvider _provider;
+  bool _redirected = false;
 
   @override
   void initState() {
@@ -59,6 +59,29 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen> {
         }
         final group = p.activeGroup;
         if (group == null) return const Scaffold(body: SizedBox.shrink());
+
+        // Auto-redirect members straight to the chat thread
+        if (!_redirected && group.isMember) {
+          _redirected = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatThreadScreen(
+                    groupId: group.id,
+                    groupName: group.name,
+                  ),
+                ),
+              );
+            }
+          });
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
 
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
@@ -147,6 +170,12 @@ class _StudyGroupDetailScreenState extends State<StudyGroupDetailScreen> {
                     ),
 
                     const SizedBox(height: 24),
+
+                    // Group chat
+                    if (group.isMember) ...[
+                      _OpenChatButton(groupId: group.id, groupName: group.name),
+                      const SizedBox(height: 12),
+                    ],
 
                     // Leave / Join
                     if (group.isMember && !group.isCreator)
@@ -705,6 +734,43 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Open chat button ──────────────────────────────────────────────────────────
+
+class _OpenChatButton extends StatelessWidget {
+  final String groupId;
+  final String groupName;
+  const _OpenChatButton({required this.groupId, required this.groupName});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatThreadScreen(groupId: groupId, groupName: groupName),
+          ),
+        ),
+        icon: const Icon(Icons.chat_rounded, size: 18),
+        label: const Text(
+          'Open Group Chat',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+        ),
       ),
     );
   }
