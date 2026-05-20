@@ -28,7 +28,7 @@ class MessagingService {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final msg = body['message'] as String?;
       throw Exception(msg ?? 'Request failed (${res.statusCode})');
-    } catch (_) {
+    } on FormatException {
       throw Exception('Request failed (${res.statusCode})');
     }
   }

@@ -112,8 +112,10 @@ class MessagingProvider extends ChangeNotifier {
   bool _isSelfTyping = false;
 
   ConvMessage? _replyingTo;
+  String? _sendError;
 
   Conversation? get activeConversation => _activeConversation;
+  String? get sendError => _sendError;
   List<ConvMessage> get messages => _messages;
   bool get messagesLoading => _messagesLoading;
   String? get messagesError => _messagesError;
@@ -232,6 +234,7 @@ class MessagingProvider extends ChangeNotifier {
 
   Future<void> sendText(String text) async {
     if (_activeConversation == null || text.trim().isEmpty) return;
+    _sendError = null;
     final convId = _activeConversation!.id;
     final replyId = _replyingTo?.id;
     _replyingTo = null;
@@ -280,13 +283,15 @@ class MessagingProvider extends ChangeNotifier {
         _messages[idx] = sent;
         notifyListeners();
       }
-    } catch (_) {
+    } catch (e) {
       final idx = _messages.indexWhere((m) => m.id == tempId);
       if (idx != -1) {
         _messages[idx] =
             _messages[idx].copyWith(isFailed: true, isPending: false);
         notifyListeners();
       }
+      _sendError = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
     }
   }
 

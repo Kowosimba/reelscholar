@@ -142,10 +142,14 @@ class _UploadReelScreenState extends State<UploadReelScreen> {
 
     if (!mounted) return;
     if (reel != null) {
+      final message = reel.isVisible
+          ? 'Reel posted!'
+          : 'Reel uploaded — validating educational content. We\'ll let you know once it\'s reviewed.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Reel posted!'),
+        SnackBar(
+          content: Text(message),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
           backgroundColor: AppColors.success,
         ),
       );

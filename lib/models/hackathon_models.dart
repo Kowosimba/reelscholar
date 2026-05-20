@@ -87,6 +87,13 @@ class HackCriterion {
       );
 }
 
+String? _parsePrizes(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is String) return raw;
+  if (raw is List) return raw.map((e) => e.toString()).join(', ');
+  return raw.toString();
+}
+
 // ── Hackathon ────────────────────────────────────────────────────────────────
 
 class Hackathon {
@@ -155,7 +162,7 @@ class Hackathon {
       teamMode: j['team_mode'] as String? ?? 'team',
       minTeamSize: j['min_team_size'] as int? ?? 1,
       maxTeamSize: j['max_team_size'] as int? ?? 4,
-      prizes: j['prizes'] as String?,
+      prizes: _parsePrizes(j['prizes']),
       criteria: rawCriteria
           .map((c) => HackCriterion.fromJson(c as Map<String, dynamic>))
           .toList(),

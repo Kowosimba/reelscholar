@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:reelscholar/models/reel_models.dart';
@@ -51,6 +52,12 @@ class ReelProvider extends ChangeNotifier {
   double _uploadProgress = 0;
   String? _uploadError;
 
+  // ─── Pending upload tracking ─────────────────────────────────────────────────
+  Reel? _pendingReel;
+  Timer? _pollTimer;
+  int _pollAttempts = 0;
+  static const int _maxPollAttempts = 24;
+
   // ─── Trending tags ───────────────────────────────────────────────────────────
   bool _tagsLoaded = false;
 
@@ -85,6 +92,9 @@ class ReelProvider extends ChangeNotifier {
   double get uploadProgress => _uploadProgress;
   String? get uploadError => _uploadError;
   String? get error => _error;
+
+  Reel? get pendingReel => _pendingReel;
+  bool get hasPendingReel => _pendingReel != null;
 
   List<Reel> userReels(String userId) => _userReels[userId] ?? [];
 
@@ -420,9 +430,21 @@ class ReelProvider extends ChangeNotifier {
           notifyListeners();
         },
       );
-      // Prepend to forYou feed
-      _feeds[FeedType.forYou] = [reel, ...(_feeds[FeedType.forYou] ?? [])];
       _isUploading = false;
+
+      // Add to uploader's own grid immediately so the status badge shows.
+      final uploaderId = reel.uploader.uid;
+      if (uploaderId.isNotEmpty && _userReels.containsKey(uploaderId)) {
+        _userReels[uploaderId] = [reel, ...(_userReels[uploaderId] ?? [])];
+      }
+
+      // Only add to the public feed if already visible; otherwise start polling.
+      if (reel.isVisible) {
+        _feeds[FeedType.forYou] = [reel, ...(_feeds[FeedType.forYou] ?? [])];
+      } else {
+        _startPolling(reel);
+      }
+
       notifyListeners();
       return reel;
     } catch (e) {
@@ -431,6 +453,70 @@ class ReelProvider extends ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  // ─── Validation polling ───────────────────────────────────────────────────────
+  void _startPolling(Reel reel) {
+    _pollTimer?.cancel();
+    _pendingReel = reel;
+    _pollAttempts = 0;
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      _pollAttempts++;
+
+      try {
+        final result = await _svc.getReelStatus(reel.id);
+        final updated = (_pendingReel ?? reel).copyWith(
+          moderationStatus: result.status,
+          moderationReason: result.reason,
+          isVisible: result.isVisible,
+        );
+
+        // Mirror updated status onto the uploader's grid cache.
+        final uploaderId = reel.uploader.uid;
+        if (uploaderId.isNotEmpty && _userReels.containsKey(uploaderId)) {
+          final list = _userReels[uploaderId]!;
+          final idx = list.indexWhere((r) => r.id == reel.id);
+          if (idx != -1) list[idx] = updated;
+        }
+
+        _pendingReel = updated;
+
+        if (updated.hasTerminalStatus) {
+          timer.cancel();
+          _pollTimer = null;
+
+          if (updated.isVisible) {
+            final feed = _feeds[FeedType.forYou] ?? [];
+            if (!feed.any((r) => r.id == updated.id)) {
+              _feeds[FeedType.forYou] = [updated, ...feed];
+            }
+          }
+        }
+
+        notifyListeners();
+      } catch (_) {
+        // Network blip — keep trying.
+      }
+
+      if (_pollAttempts >= _maxPollAttempts) {
+        timer.cancel();
+        _pollTimer = null;
+      }
+    });
+  }
+
+  void dismissPendingReel() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _pendingReel = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   // ─── Delete reel ─────────────────────────────────────────────────────────────

@@ -111,6 +111,9 @@ class Reel {
   bool isLiked;
   bool isBookmarked;
   final DateTime createdAt;
+  final String moderationStatus;
+  final String? moderationReason;
+  final bool isVisible;
 
   Reel({
     required this.id,
@@ -130,7 +133,18 @@ class Reel {
     required this.isLiked,
     required this.isBookmarked,
     required this.createdAt,
+    this.moderationStatus = 'auto_approved',
+    this.moderationReason,
+    this.isVisible = true,
   });
+
+  bool get isProcessing => moderationStatus == 'processing';
+  bool get isUnderReview => moderationStatus == 'under_review';
+  bool get isAutoRejected => moderationStatus == 'auto_rejected';
+  bool get isAdminRejected => moderationStatus == 'admin_rejected';
+  bool get isRejected => isAutoRejected || isAdminRejected;
+  bool get isPending => isProcessing || isUnderReview;
+  bool get hasTerminalStatus => isVisible || isRejected;
 
   factory Reel.fromJson(Map<String, dynamic> j) {
     List<String> tags = [];
@@ -169,6 +183,9 @@ class Reel {
       isBookmarked: j['is_bookmarked'] as bool? ?? false,
       createdAt:
           DateTime.tryParse(j['created_at'] as String? ?? '') ?? DateTime.now(),
+      moderationStatus: j['moderation_status'] as String? ?? 'auto_approved',
+      moderationReason: j['moderation_reason'] as String?,
+      isVisible: j['is_visible'] as bool? ?? true,
     );
   }
 
@@ -181,6 +198,9 @@ class Reel {
     int? commentCount,
     int? viewCount,
     int? shareCount,
+    String? moderationStatus,
+    String? moderationReason,
+    bool? isVisible,
   }) => Reel(
     id: id,
     uploader: uploader ?? this.uploader,
@@ -199,6 +219,9 @@ class Reel {
     isLiked: isLiked ?? this.isLiked,
     isBookmarked: isBookmarked ?? this.isBookmarked,
     createdAt: createdAt,
+    moderationStatus: moderationStatus ?? this.moderationStatus,
+    moderationReason: moderationReason ?? this.moderationReason,
+    isVisible: isVisible ?? this.isVisible,
   );
 }
 

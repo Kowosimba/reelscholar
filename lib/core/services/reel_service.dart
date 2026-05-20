@@ -117,6 +117,23 @@ class ReelService {
     return Reel.fromJson(body['data'] as Map<String, dynamic>);
   }
 
+  // ─── GET /reels/{id}/status — lightweight poll for moderation state ────────
+  Future<({String status, String? reason, bool isVisible})> getReelStatus(
+    String reelId,
+  ) async {
+    final r = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/status'),
+      headers: await _headers(),
+    );
+    final body = _parse(r);
+    final data = body['data'] as Map<String, dynamic>;
+    return (
+      status: data['moderation_status'] as String? ?? 'processing',
+      reason: data['moderation_reason'] as String?,
+      isVisible: data['is_visible'] as bool? ?? false,
+    );
+  }
+
   // ─── POST /reels — multipart upload ────────────────────────────────────────
   Future<Reel> uploadReel({
     required XFile video,
@@ -214,7 +231,7 @@ class ReelService {
     await http.post(
       Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/view'),
       headers: await _headers(),
-      body: jsonEncode({'watch_seconds': watchSeconds}),
+      body: watchSeconds != null ? jsonEncode({'watch_seconds': watchSeconds}) : null,
     );
     // Fire-and-forget; don't throw on failure
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:reelscholar/models/reel_models.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'widgets/reel_widgets.dart';
 
@@ -73,16 +74,41 @@ class _UserReelsTabState extends State<UserReelsTab>
               );
             }
             final reel = reels[widget.isOwnProfile ? i - 1 : i];
+            final showBadge = widget.isOwnProfile && !reel.isVisible;
+
             return Stack(
               children: [
-                ReelThumbnailCard(
-                  reel: reel,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/reel-detail',
-                    arguments: reel,
+                Opacity(
+                  opacity: reel.isRejected ? 0.55 : 1.0,
+                  child: ReelThumbnailCard(
+                    reel: reel,
+                    onTap: () {
+                      if (reel.isRejected) {
+                        _showRejectionSheet(context, reel);
+                      } else if (reel.isPending) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('This reel is still being reviewed.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      } else {
+                        Navigator.pushNamed(
+                          context,
+                          '/reel-detail',
+                          arguments: reel,
+                        );
+                      }
+                    },
                   ),
                 ),
+                if (showBadge)
+                  Positioned(
+                    bottom: 6,
+                    left: 6,
+                    right: 6,
+                    child: _StatusBadge(reel: reel),
+                  ),
                 if (widget.isOwnProfile)
                   Positioned(
                     top: 6,
@@ -91,7 +117,7 @@ class _UserReelsTabState extends State<UserReelsTab>
                       onTap: () => _confirmDelete(context, prov, reel.id),
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
@@ -225,6 +251,143 @@ class _UploadPromptCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Status badge shown on uploader's own grid ───────────────────────────────
+class _StatusBadge extends StatelessWidget {
+  final Reel reel;
+  const _StatusBadge({required this.reel});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, bg, icon) = switch (reel.moderationStatus) {
+      'processing' => ('Validating', const Color(0xFF1D4ED8), Icons.hourglass_top_rounded),
+      'under_review' => ('Reviewing', const Color(0xFFD97706), Icons.visibility_outlined),
+      'auto_rejected' || 'admin_rejected' => ('Rejected', const Color(0xFFDC2626), Icons.block_rounded),
+      _ => ('', Colors.transparent, Icons.circle),
+    };
+
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 10, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Rejection bottom sheet ───────────────────────────────────────────────────
+void _showRejectionSheet(BuildContext context, Reel reel) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Row(
+              children: [
+                Icon(Icons.block_rounded, color: AppColors.error),
+                SizedBox(width: 10),
+                Text(
+                  'Reel was rejected',
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              _humanReason(reel.moderationReason),
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 13,
+                height: 1.5,
+                color: Color(0xFF374151),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/upload-reel');
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Try a different video',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+String _humanReason(String? reason) {
+  return switch (reason) {
+    'not_educational' =>
+      "Our AI didn't detect educational content in this video. ReelScholar is for sharing educational material — please try a different video.",
+    'validation_failed' =>
+      "We couldn't validate this video. This might be a temporary issue — please try uploading again.",
+    null => "This reel didn't meet our community guidelines.",
+    _ => reason,
+  };
 }
 
 // Reference to AppColors — include in standalone build

@@ -134,7 +134,7 @@ class _SearchReelsScreenState extends State<SearchReelsScreen> {
 
           // Results grid
           return _SearchResults(
-            reels: prov.searchResults,
+            reels: prov.searchResults.where((r) => r.isVisible).toList(),
             query: _ctrl.text,
             onReelTap: (reel) =>
                 Navigator.pushNamed(context, '/reel-detail', arguments: reel),

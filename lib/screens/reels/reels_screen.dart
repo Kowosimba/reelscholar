@@ -81,7 +81,7 @@ class _ReelsScreenState extends State<ReelsScreen>
                 }
               }
 
-              final reels = prov.currentFeedReels;
+              final reels = prov.currentFeedReels.where((r) => r.isVisible).toList();
 
               if (prov.feedState == ReelLoadState.loading && reels.isEmpty) {
                 return const _FeedSkeleton();

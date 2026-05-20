@@ -76,6 +76,13 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     if (text.isEmpty) return;
     _textCtrl.clear();
     await _messaging.sendText(text);
+    if (_messaging.sendError != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_messaging.sendError!),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   Future<void> _pickImage() async {

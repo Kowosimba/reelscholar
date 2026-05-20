@@ -73,7 +73,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             return const _BookmarksSkeleton();
           }
 
-          if (prov.bookmarks.isEmpty) {
+          final visibleBookmarks = prov.bookmarks.where((r) => r.isVisible).toList();
+
+          if (visibleBookmarks.isEmpty) {
             return ReelEmptyState(
               icon: Icons.bookmark_border_rounded,
               title: 'No saved reels',
@@ -84,13 +86,13 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
 
           if (_isGrid) {
             return _GridView(
-              reels: prov.bookmarks,
+              reels: visibleBookmarks,
               scrollCtrl: _scrollCtrl,
               hasMore: prov.hasMoreBookmarks,
             );
           } else {
             return _ListView(
-              reels: prov.bookmarks,
+              reels: visibleBookmarks,
               scrollCtrl: _scrollCtrl,
               hasMore: prov.hasMoreBookmarks,
               onUnsave: (reelId) => prov.toggleBookmark(reelId),
