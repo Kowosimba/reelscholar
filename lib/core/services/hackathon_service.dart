@@ -1,6 +1,7 @@
 // lib/core/services/hackathon_service.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:reelscholar/core/constants/api_constants.dart';
@@ -18,12 +19,14 @@ class HackathonService {
   }
 
   // ── GET /hackathons ───────────────────────────────────────────────────────
-  Future<({List<Hackathon> items, int total, int lastPage})>
-      listHackathons({int page = 1}) async {
+  Future<({List<Hackathon> items, int total, int lastPage})> listHackathons({
+    int page = 1,
+  }) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons?page=$page'), 
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons?page=$page'),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final rawData = body['data'];
@@ -34,7 +37,8 @@ class HackathonService {
       meta = body['meta'] as Map<String, dynamic>? ?? {};
     } else if (rawData is Map<String, dynamic>) {
       items = rawData['data'] as List? ?? [];
-      meta = body['meta'] as Map<String, dynamic>? ??
+      meta =
+          body['meta'] as Map<String, dynamic>? ??
           rawData['meta'] as Map<String, dynamic>? ??
           {};
     } else {
@@ -54,8 +58,9 @@ class HackathonService {
   Future<Hackathon> getHackathon(String id) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$id'), 
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$id'),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return Hackathon.fromJson(body['data'] as Map<String, dynamic>);
@@ -65,19 +70,21 @@ class HackathonService {
   Future<List<HackLeaderboardEntry>> getLeaderboard(String id) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$id/leaderboard'), 
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$id/leaderboard'),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return (body['data'] as List)
-        .map((e) =>
-            HackLeaderboardEntry.fromJson(e as Map<String, dynamic>))
+        .map((e) => HackLeaderboardEntry.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   // ── POST /hackathons/{id}/teams ───────────────────────────────────────────
-  Future<({String teamId, String name, String inviteCode})>
-      createTeam(String hackId, String name) async {
+  Future<({String teamId, String name, String inviteCode})> createTeam(
+    String hackId,
+    String name,
+  ) async {
     final headers = await _getHeaders();
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams'),
@@ -114,8 +121,9 @@ class HackathonService {
   Future<void> leaveTeam(String hackId) async {
     final headers = await _getHeaders();
     final res = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/leave'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/leave'),
+      headers: headers,
+    );
     _ok(res);
   }
 
@@ -123,8 +131,9 @@ class HackathonService {
   Future<List<OpenTeam>> getOpenTeams(String hackId) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/open'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/open'),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return (body['data'] as List)
@@ -132,7 +141,27 @@ class HackathonService {
         .toList();
   }
 
-  // ── POST /hackathons/{id}/submission (draft save) ─────────────────────────
+  // ── PATCH /hackathons/{id}/teams/progress ─────────────────────────────────
+  Future<void> updateProgress(
+    String hackId, {
+    required String step,
+    required int percentage,
+    String? notes,
+  }) async {
+    final headers = await _getHeaders();
+    final res = await http.patch(
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/progress'),
+      headers: headers,
+      body: jsonEncode({
+        'step': step,
+        'percentage': percentage,
+        'notes': ?notes,
+      }),
+    );
+    _ok(res);
+  }
+
+  // ── POST /hackathons/{id}/submission ──────────────────────────────────────
   Future<HackSubmission> saveSubmission(
     String hackId, {
     required String projectName,
@@ -164,26 +193,29 @@ class HackathonService {
     return HackSubmission.fromJson(data);
   }
 
-  // ── POST /hackathons/{id}/submission/finalise ────────────────────────────
+  // ── POST /hackathons/{id}/submission/finalise ─────────────────────────────
   Future<void> finaliseSubmission(String hackId) async {
     final headers = await _getHeaders();
     final res = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/submission/finalise'),
-        headers: headers);
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/submission/finalise',
+      ),
+      headers: headers,
+    );
     _ok(res);
   }
 
-  // ── GET /hackathons/{id}/submissions ─────────────────────────────────────
+  // ── GET /hackathons/{id}/submissions ──────────────────────────────────────
   Future<List<HackSubmission>> getSubmissions(String hackId) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/submissions'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/submissions'),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return (body['data'] as List)
-        .map((s) =>
-            HackSubmission.fromJson(s as Map<String, dynamic>))
+        .map((s) => HackSubmission.fromJson(s as Map<String, dynamic>))
         .toList();
   }
 
@@ -198,12 +230,13 @@ class HackathonService {
     _ok(res);
   }
 
-  // ── GET /hackathons/{id}/vote/status ─────────────────────────────────────
+  // ── GET /hackathons/{id}/vote/status ──────────────────────────────────────
   Future<VoteStatus> getVoteStatus(String hackId) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/vote/status'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/vote/status'),
+      headers: headers,
+    );
     _ok(res);
     final data =
         (jsonDecode(res.body) as Map<String, dynamic>)['data']
@@ -212,12 +245,17 @@ class HackathonService {
   }
 
   // ── GET /hackathons/{id}/discussion ──────────────────────────────────────
-  Future<({List<DiscussionComment> comments, int total})>
-      getDiscussion(String hackId, {int page = 1}) async {
+  Future<({List<DiscussionComment> comments, int total})> getDiscussion(
+    String hackId, {
+    int page = 1,
+  }) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/discussion?page=$page'),
-        headers: headers);
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/discussion?page=$page',
+      ),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final rawData = body['data'];
@@ -228,7 +266,8 @@ class HackathonService {
       meta = body['meta'] as Map<String, dynamic>? ?? {};
     } else if (rawData is Map<String, dynamic>) {
       items = rawData['data'] as List? ?? [];
-      meta = body['meta'] as Map<String, dynamic>? ??
+      meta =
+          body['meta'] as Map<String, dynamic>? ??
           rawData['meta'] as Map<String, dynamic>? ??
           {};
     } else {
@@ -237,16 +276,14 @@ class HackathonService {
     }
     return (
       comments: items
-          .map((c) =>
-              DiscussionComment.fromJson(c as Map<String, dynamic>))
+          .map((c) => DiscussionComment.fromJson(c as Map<String, dynamic>))
           .toList(),
       total: meta['total'] as int? ?? 0,
     );
   }
 
   // ── POST /hackathons/{id}/discussion ─────────────────────────────────────
-  Future<DiscussionComment> postComment(
-      String hackId, String body) async {
+  Future<DiscussionComment> postComment(String hackId, String body) async {
     final headers = await _getHeaders();
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/discussion'),
@@ -262,11 +299,15 @@ class HackathonService {
 
   // ── POST /hackathons/{id}/discussion/{comment}/reply ─────────────────────
   Future<DiscussionComment> replyToComment(
-      String hackId, String commentId, String body) async {
+    String hackId,
+    String commentId,
+    String body,
+  ) async {
     final headers = await _getHeaders();
     final res = await http.post(
       Uri.parse(
-          '${ApiConstants.baseUrl}/hackathons/$hackId/discussion/$commentId/reply'),
+        '${ApiConstants.baseUrl}/hackathons/$hackId/discussion/$commentId/reply',
+      ),
       headers: headers,
       body: jsonEncode({'body': body}),
     );
@@ -281,16 +322,18 @@ class HackathonService {
   Future<void> likeComment(String commentId) async {
     final headers = await _getHeaders();
     await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/hackathon-comments/$commentId/like'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathon-comments/$commentId/like'),
+      headers: headers,
+    );
   }
 
   // ── DELETE /hackathon-comments/{id} ──────────────────────────────────────
   Future<void> deleteComment(String commentId) async {
     final headers = await _getHeaders();
     final res = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/hackathon-comments/$commentId'),
-        headers: headers);
+      Uri.parse('${ApiConstants.baseUrl}/hackathon-comments/$commentId'),
+      headers: headers,
+    );
     _ok(res);
   }
 
@@ -307,10 +350,15 @@ class HackathonService {
 
   // ── POST /hackathons/{id}/mentor/chat/{teamId} ────────────────────────────
   Future<MentorMessage> sendMentorMessage(
-      String hackId, String teamId, String body) async {
+    String hackId,
+    String teamId,
+    String body,
+  ) async {
     final headers = await _getHeaders();
     final res = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/mentor/chat/$teamId'),
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/mentor/chat/$teamId',
+      ),
       headers: headers,
       body: jsonEncode({'body': body}),
     );
@@ -323,11 +371,16 @@ class HackathonService {
 
   // ── GET /hackathons/{id}/mentor/chat/{teamId} ─────────────────────────────
   Future<List<MentorMessage>> getMentorChat(
-      String hackId, String teamId) async {
+    String hackId,
+    String teamId,
+  ) async {
     final headers = await _getHeaders();
     final res = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/mentor/chat/$teamId'),
-        headers: headers);
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/mentor/chat/$teamId',
+      ),
+      headers: headers,
+    );
     _ok(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final data = body['data'];
@@ -339,26 +392,185 @@ class HackathonService {
     return [];
   }
 
-  // ── PATCH /hackathons/{id}/teams/progress ─────────────────────────────────
-  Future<void> updateProgress(
-    String hackId, {
-    required String step,
-    required int percentage,
-    String? notes,
+  // ────────────────────────────────────────────────────────────────────────────
+  // TEAM CHAT ENDPOINTS
+  // NOTE: team chat endpoints are live on the backend (confirmed).
+  // ── GET /hackathons/{hack}/teams/{team}/chat ──────────────────────────────
+
+  Future<({List<HackTeamMessage> items, bool hasMore, int nextPage})>
+  getTeamChat(String hackId, String teamId, {int page = 1}) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat',
+    ).replace(queryParameters: {'per_page': '50', 'page': '$page'});
+    final res = await http.get(uri, headers: await _getHeaders());
+    _ok(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final rawData = body['data'];
+    final List list;
+    final Map<String, dynamic> meta;
+    if (rawData is Map<String, dynamic>) {
+      list = rawData['data'] as List? ?? [];
+      meta = body['meta'] as Map<String, dynamic>? ??
+          rawData['meta'] as Map<String, dynamic>? ?? {};
+    } else {
+      list = rawData is List ? rawData : [];
+      meta = body['meta'] as Map<String, dynamic>? ?? {};
+    }
+    final currentPage = int.tryParse(meta['current_page']?.toString() ?? '') ?? page;
+    final lastPage = int.tryParse(meta['last_page']?.toString() ?? '') ?? 1;
+    final items = list
+        .map((m) => HackTeamMessage.fromJson(m as Map<String, dynamic>))
+        .toList();
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return (
+      items: items,
+      hasMore: currentPage < lastPage,
+      nextPage: currentPage + 1,
+    );
+  }
+
+  // ── POST /hackathons/{hack}/teams/{team}/chat ─────────────────────────────
+  Future<HackTeamMessage> sendTeamChatText(
+    String hackId,
+    String teamId,
+    String bodyText, {
+    String? replyToId,
   }) async {
-    final headers = await _getHeaders();
-    final res = await http.patch(
-      Uri.parse('${ApiConstants.baseUrl}/hackathons/$hackId/teams/progress'),
-      headers: headers,
-      body: jsonEncode({
-        'step': step,
-        'percentage': percentage,
-        'notes': ?notes,
-      }),
+    final payload = <String, dynamic>{'body': bodyText};
+    if (replyToId != null) payload['reply_to_id'] = replyToId;
+    final res = await http.post(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat',
+      ),
+      headers: await _getHeaders(),
+      body: jsonEncode(payload),
+    );
+    _ok(res);
+    final data =
+        (jsonDecode(res.body) as Map<String, dynamic>)['data']
+            as Map<String, dynamic>;
+    return HackTeamMessage.fromJson(data);
+  }
+
+  // ── POST /hackathons/{hack}/teams/{team}/chat/media ───────────────────────
+  Future<HackTeamMessage> sendTeamChatMedia(
+    String hackId,
+    String teamId,
+    List<File> files, {
+    String? caption,
+    String? replyToId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/media',
+      ),
+    );
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+    if (caption != null && caption.isNotEmpty) request.fields['body'] = caption;
+    if (replyToId != null) request.fields['reply_to_id'] = replyToId;
+    for (final f in files) {
+      request.files.add(
+        await http.MultipartFile.fromPath('attachments[]', f.path),
+      );
+    }
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    _ok(res);
+    final data =
+        (jsonDecode(res.body) as Map<String, dynamic>)['data']
+            as Map<String, dynamic>;
+    return HackTeamMessage.fromJson(data);
+  }
+
+  // ── POST /hackathons/{hack}/teams/{team}/chat/{msg}/react ─────────────────
+  Future<Map<String, List<String>>> reactToTeamChatMessage(
+    String hackId,
+    String teamId,
+    String messageId,
+    String emoji,
+  ) async {
+    final res = await http.post(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/$messageId/react',
+      ),
+      headers: await _getHeaders(),
+      body: jsonEncode({'emoji': emoji}),
+    );
+    _ok(res);
+    final data =
+        (jsonDecode(res.body) as Map<String, dynamic>)['data']
+            as Map<String, dynamic>? ??
+        {};
+    final raw = data['reactions'];
+    if (raw is Map) {
+      return raw.map(
+        (k, v) => MapEntry(
+          k.toString(),
+          v is List ? v.map((e) => e.toString()).toList() : [v.toString()],
+        ),
+      );
+    }
+    return {};
+  }
+
+  // ── DELETE /hackathons/{hack}/teams/{team}/chat/{msg} ─────────────────────
+  Future<void> deleteTeamChatMessage(
+    String hackId,
+    String teamId,
+    String messageId,
+  ) async {
+    final res = await http.delete(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/$messageId',
+      ),
+      headers: await _getHeaders(),
     );
     _ok(res);
   }
 
+  // ── POST .../chat/typing/start ────────────────────────────────────────────
+  Future<void> startTeamChatTyping(String hackId, String teamId) async {
+    await http.post(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/typing/start',
+      ),
+      headers: await _getHeaders(),
+    );
+  }
+
+  // ── POST .../chat/typing/stop ─────────────────────────────────────────────
+  Future<void> stopTeamChatTyping(String hackId, String teamId) async {
+    await http.post(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/typing/stop',
+      ),
+      headers: await _getHeaders(),
+    );
+  }
+
+  // ── GET .../chat/typing ───────────────────────────────────────────────────
+  Future<List<String>> getTeamChatTypingUsers(
+    String hackId,
+    String teamId,
+  ) async {
+    final res = await http.get(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/hackathons/$hackId/teams/$teamId/chat/typing',
+      ),
+      headers: await _getHeaders(),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) return [];
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'];
+    if (data is List) return data.map((e) => e.toString()).toList();
+    return [];
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   void _ok(http.Response res) {
     if (res.statusCode >= 200 && res.statusCode < 300) return;
     String? msg;

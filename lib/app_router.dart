@@ -28,6 +28,7 @@ import 'screens/social/followers_screen.dart';
 import 'screens/social/blocked_users_screen.dart';
 import 'screens/hackathons/hackathon_list_screen.dart';
 import 'screens/hackathons/hackathon_detail_screen.dart';
+import 'screens/notifications/notification_preferences_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -66,6 +67,7 @@ class AppRouter {
   static const String searchUsers = '/search-users';
   static const String profile = '/profile';
   static const String publicProfile = '/public-profile';
+  static const String notificationPreferences = '/notification-preferences';
 
   // ── Route map ────────────────────────────────────────────────────────────────
   static Map<String, WidgetBuilder> get routes => {
@@ -94,6 +96,7 @@ class AppRouter {
     settings: (_) => const SettingsScreen(),
     searchUsers: (_) => const UserSearchScreen(),
     publicProfile: (_) => const PublicProfileScreen(userId: ''),
+    notificationPreferences: (_) => const NotificationPreferencesScreen(),
   };
 
   // ── On-generate route (for routes needing arguments) ─────────────────────────

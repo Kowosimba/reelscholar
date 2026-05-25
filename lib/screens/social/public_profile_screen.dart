@@ -64,10 +64,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         if (user == null) return const Scaffold(body: SizedBox.shrink());
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
             slivers: [
-              _ProfileSliverAppBar(user: user, provider: provider),
+              _ProfileSliverAppBar(
+                user: user,
+                provider: provider,
+                onBlockTap: () => _confirmBlock(context, user, provider),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -146,7 +150,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                   MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Level ${user.xpLevel}',
+                                  '${user.rankTitle} · Lv ${user.xpLevel}',
                                   style: const TextStyle(
                                     fontFamily: 'DM Sans',
                                     fontSize: 12,
@@ -172,7 +176,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                 value: user.xpProgress,
                                 minHeight: 7,
                                 backgroundColor:
-                                    const Color(0xFFF1F5F9),
+                                    Theme.of(context).colorScheme.surfaceContainerHighest,
                                 valueColor:
                                     const AlwaysStoppedAnimation<Color>(
                                   AppColors.primary,
@@ -183,32 +187,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 24),
-
-                      // Block action (always available)
-                      if (!user.isBlocked)
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _confirmBlock(context, user, provider),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side:
-                                  const BorderSide(color: AppColors.error),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                            icon: const Icon(Icons.block_rounded,
-                                size: 16),
-                            label: const Text(
-                              'Block User',
-                              style: TextStyle(
-                                  fontFamily: 'DM Sans',
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -288,9 +266,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 class _ProfileSliverAppBar extends StatelessWidget {
   final AppUser user;
   final SocialProvider provider;
+  final VoidCallback onBlockTap;
 
   const _ProfileSliverAppBar(
-      {required this.user, required this.provider});
+      {required this.user, required this.provider, required this.onBlockTap});
 
   List<Color> get _gradColors {
     final hue = user.fullName.codeUnits.fold(0, (a, b) => a + b) % 360;
@@ -308,6 +287,20 @@ class _ProfileSliverAppBar extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+          onSelected: (val) {
+            if (val == 'block') onBlockTap();
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'block',
+              child: Text(user.isBlocked ? 'Unblock User' : 'Block User'),
+            ),
+          ],
+        ),
+      ],
       leading: IconButton(
         icon: Container(
           width: 32,
@@ -570,7 +563,7 @@ class _StatTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border),
           ),
@@ -612,7 +605,7 @@ class _Card extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.border),
         ),

@@ -400,7 +400,7 @@ class _TypeChip extends StatelessWidget {
         Icons.construction_rounded,
       ),
       FlashcardType.comparison => (
-        const Color(0xFFF59E0B),
+        TColors.warning,
         Icons.compare_arrows_rounded,
       ),
       FlashcardType.example => (
@@ -487,14 +487,14 @@ class _ReviewControls extends StatelessWidget {
           _RatingButton(
             label: 'Again',
             hint: '< 1m',
-            color: const Color(0xFFEF4444),
+            color: TColors.error,
             onTap: () => onRate(FsrsRating.again),
           ),
           const SizedBox(width: 8),
           _RatingButton(
             label: 'Hard',
             hint: '< 10m',
-            color: const Color(0xFFF59E0B),
+            color: TColors.warning,
             onTap: () => onRate(FsrsRating.hard),
           ),
           const SizedBox(width: 8),
@@ -657,8 +657,8 @@ class _SessionComplete extends StatelessWidget {
                 color: accuracy >= 80
                     ? const Color(0xFF10B981)
                     : accuracy >= 60
-                    ? const Color(0xFFF59E0B)
-                    : const Color(0xFFEF4444),
+                    ? TColors.warning
+                    : TColors.error,
               ),
             ],
           ),

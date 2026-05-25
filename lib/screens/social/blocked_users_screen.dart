@@ -26,7 +26,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         leading: IconButton(
@@ -57,7 +57,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
               // Info banner
               Container(
                 width: double.infinity,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -93,14 +93,14 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                   onRefresh: () => p.loadBlockedUsers(refresh: true),
                   child: ListView.separated(
                     itemCount: p.blockedUsers.length,
-                    separatorBuilder: (_, _) => const Divider(
+                    separatorBuilder: (_, _) => Divider(
                         height: 1,
                         indent: 70,
-                        color: Color(0xFFF1F5F9)),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest),
                     itemBuilder: (_, i) {
                       final user = p.blockedUsers[i];
                       return Container(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         child: UserTile(
                           user: user,
                           showFollowBtn: false,
@@ -140,7 +140,7 @@ class _UnblockButtonState extends State<_UnblockButton> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
@@ -237,7 +237,7 @@ class _EmptyBlocked extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.block_rounded,
@@ -277,18 +277,20 @@ class _BlockedShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       itemCount: 5,
-      separatorBuilder: (_, _) =>
-          const Divider(height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+      separatorBuilder: (_, _) => Divider(
+          height: 1,
+          indent: 70,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest),
       itemBuilder: (_, _) => Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
             ),
@@ -297,9 +299,15 @@ class _BlockedShimmer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 12, width: 110, color: const Color(0xFFF1F5F9)),
+                  Container(
+                      height: 12,
+                      width: 110,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                   const SizedBox(height: 6),
-                  Container(height: 10, width: 170, color: const Color(0xFFF1F5F9)),
+                  Container(
+                      height: 10,
+                      width: 170,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                 ],
               ),
             ),
@@ -308,7 +316,7 @@ class _BlockedShimmer extends StatelessWidget {
               width: 70,
               height: 28,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(20),
               ),
             ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "301733312809",
+    "project_id": "reelscholar-772d9",
+    "storage_bucket": "reelscholar-772d9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301733312809:android:8457ef76b27ac00f7f5f38",
+        "android_client_info": {
+          "package_name": "com.example.reelscholar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxdRVly9Kujf9gC7gvf-GE49Q56E7P9GE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

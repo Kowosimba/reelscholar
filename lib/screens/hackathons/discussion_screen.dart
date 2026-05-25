@@ -8,7 +8,8 @@ import 'package:reelscholar/models/hackathon_models.dart';
 
 class DiscussionScreen extends StatefulWidget {
   final String hackId;
-  const DiscussionScreen({super.key, required this.hackId});
+  final bool showAppBar;
+  const DiscussionScreen({super.key, required this.hackId, this.showAppBar = true});
 
   @override
   State<DiscussionScreen> createState() => _DiscussionScreenState();
@@ -55,7 +56,7 @@ class _DiscussionScreenState extends State<DiscussionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
+      appBar: widget.showAppBar ? AppBar(
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -71,7 +72,7 @@ class _DiscussionScreenState extends State<DiscussionScreen> {
             color: AppColors.textPrimary,
           ),
         ),
-      ),
+      ) : null,
       body: Column(
         children: [
           Expanded(
@@ -245,12 +246,28 @@ class _UserAvatar extends StatelessWidget {
     return Container(
       width: 36,
       height: 36,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF1F5F9),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
       ),
-      child: pic != null
-          ? ClipOval(child: Image.network(pic!, fit: BoxFit.cover))
+      child: pic != null && pic!.isNotEmpty
+          ? ClipOval(
+              child: Image.network(
+                pic!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Center(
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontFamily: 'Sora',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ),
+              ),
+            )
           : Center(
               child: Text(
                 initials,

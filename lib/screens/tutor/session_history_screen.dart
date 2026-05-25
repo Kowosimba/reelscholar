@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/tutor_provider.dart';
 import 'package:reelscholar/models/tutor_models.dart';
@@ -526,15 +527,39 @@ class _TranscriptMessage extends StatelessWidget {
                     ? CrossAxisAlignment.end
                     : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 13,
-                      color: isUser ? Colors.white : TColors.textPrimary,
-                      height: 1.45,
+                  if (isUser)
+                    Text(
+                      message.content,
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        color: Colors.white,
+                        height: 1.45,
+                      ),
+                    )
+                  else
+                    MarkdownBody(
+                      data: message.content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 13,
+                          color: TColors.textPrimary,
+                          height: 1.45,
+                        ),
+                        strong: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: TColors.textPrimary,
+                        ),
+                        code: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: TColors.textPrimary,
+                        ),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 4),
                   Text(
                     _timeAgo(message.timestamp),

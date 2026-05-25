@@ -3,42 +3,51 @@ import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get light {
+  AppTheme._();
+
+  static ThemeData get lightTheme => _build(Brightness.light);
+  static ThemeData get darkTheme => _build(Brightness.dark);
+
+  static ThemeData _build(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final surfaceColor = isDark ? AppColors.darkNav : AppColors.white;
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+
     return ThemeData(
       useMaterial3: true,
+      brightness: brightness,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: AppColors.surface,
+        surface: surfaceColor,
         error: AppColors.error,
+        brightness: brightness,
       ),
-      scaffoldBackgroundColor: AppColors.backgroundWhite,
-      fontFamily: 'DM Sans',
+      scaffoldBackgroundColor: surfaceColor,
+      fontFamily: AppFonts.dmSans,
 
-      // AppBar
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
+      appBarTheme: AppBarTheme(
+        backgroundColor: surfaceColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'Sora',
-          fontSize: 17,
+          fontFamily: AppFonts.sora,
+          fontSize: 18,
           fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
+          color: textColor,
         ),
-        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: textColor),
         systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.light,
-          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         ),
       ),
 
-      // Input fields — matching wireframe .inp style
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.backgroundMuted,
+        fillColor: AppColors.muted,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -61,18 +70,18 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
         labelStyle: const TextStyle(
-          fontFamily: 'DM Sans',
+          fontFamily: AppFonts.dmSans,
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppColors.textSecondary,
         ),
         hintStyle: const TextStyle(
-          fontFamily: 'DM Sans',
+          fontFamily: AppFonts.dmSans,
           fontSize: 13,
           color: AppColors.textTertiary,
         ),
         errorStyle: const TextStyle(
-          fontFamily: 'DM Sans',
+          fontFamily: AppFonts.dmSans,
           fontSize: 12,
           color: AppColors.error,
         ),
@@ -80,7 +89,6 @@ class AppTheme {
         suffixIconColor: AppColors.textTertiary,
       ),
 
-      // Elevated button — .btn-p style
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -89,44 +97,79 @@ class AppTheme {
           elevation: 0,
           shadowColor: Colors.transparent,
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(
-            fontFamily: 'DM Sans',
+            fontFamily: AppFonts.dmSans,
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.1,
           ),
         ),
       ),
 
-      // Outlined button — .btn-out style
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(
-            fontFamily: 'DM Sans',
+            fontFamily: AppFonts.dmSans,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
 
-      // TextButton
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
           textStyle: const TextStyle(
-            fontFamily: 'DM Sans',
+            fontFamily: AppFonts.dmSans,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
+        ),
+      ),
+
+      tabBarTheme: const TabBarThemeData(
+        indicatorColor: AppColors.primary,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textTertiary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: AppColors.border,
+      ),
+
+      drawerTheme: const DrawerThemeData(
+        backgroundColor: AppColors.white,
+        scrimColor: Colors.black54,
+        width: 290,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
+        ),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        contentTextStyle: const TextStyle(
+          fontFamily: AppFonts.dmSans,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: const TextStyle(
+          fontFamily: AppFonts.sora,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: AppFonts.dmSans,
+          fontSize: 14,
+          color: AppColors.textSecondary,
         ),
       ),
     );

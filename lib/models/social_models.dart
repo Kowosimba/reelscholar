@@ -52,6 +52,15 @@ class AppUser {
   int get xpLevel => (totalXp / 500).floor() + 1;
   double get xpProgress => (totalXp % 500) / 500;
 
+  String get rankTitle {
+    if (xpLevel >= 20) return 'Legend';
+    if (xpLevel >= 15) return 'Master';
+    if (xpLevel >= 10) return 'Expert';
+    if (xpLevel >= 6)  return 'Scholar';
+    if (xpLevel >= 3)  return 'Learner';
+    return 'Beginner';
+  }
+
   static bool _parseBool(dynamic v) {
     if (v is bool) return v;
     if (v is String) return v == 'true' || v == '1';
@@ -73,7 +82,11 @@ class AppUser {
         bio: j['bio'] as String?,
         profilePicUrl: j['profile_pic_url'] as String? ??
             j['profile_picture'] as String?,
-        totalXp: int.tryParse(j['total_xp']?.toString() ?? '0') ?? 0,
+        totalXp: int.tryParse(
+              j['total_xp']?.toString() ??
+              j['xp']?.toString() ??
+              j['experience']?.toString() ??
+              j['xp_points']?.toString() ?? '0') ?? 0,
         currentStreak:
             int.tryParse(j['current_streak']?.toString() ?? '0') ?? 0,
         longestStreak:

@@ -114,7 +114,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
               body: Center(child: CircularProgressIndicator()));
         }
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: AppColors.muted,
           appBar: _buildAppBar(conv, provider),
           body: Column(
             children: [
@@ -206,16 +206,6 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                         color: AppColors.textSecondary,
                       ),
                     )
-                  else
-                    const Text(
-                      'Online',
-                      style: TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 11,
-                        color: AppColors.success,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -645,7 +635,7 @@ class _ReplySnippet extends StatelessWidget {
       decoration: BoxDecoration(
         color: isMe
             ? Colors.white.withValues(alpha: 0.2)
-            : const Color(0xFFF1F5F9),
+            : AppColors.divider,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
@@ -878,7 +868,7 @@ class _DateSeparator extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFE2E8F0),
+          color: AppColors.border,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -909,7 +899,7 @@ class _SystemMessage extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: AppColors.divider,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -1006,7 +996,7 @@ class _ReplyPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFFF0FDF9),
+        color: AppColors.bg,
         border: Border(top: BorderSide(color: AppColors.primary, width: 2)),
       ),
       child: Row(
@@ -1098,7 +1088,7 @@ class _InputBar extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.attach_file_rounded,
@@ -1110,7 +1100,7 @@ class _InputBar extends StatelessWidget {
             child: Container(
               constraints: const BoxConstraints(maxHeight: 120),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: TextField(

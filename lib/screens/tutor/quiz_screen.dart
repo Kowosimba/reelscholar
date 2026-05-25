@@ -336,9 +336,9 @@ class _OptionTile extends StatelessWidget {
         letterColor = Colors.white;
         trailingIcon = Icons.check_circle_rounded;
       } else if (selected) {
-        bg = const Color(0xFFEF4444).withValues(alpha: 0.1);
-        borderColor = const Color(0xFFEF4444);
-        letterBg = const Color(0xFFEF4444);
+        bg = TColors.error.withValues(alpha: 0.1);
+        borderColor = TColors.error;
+        letterBg = TColors.error;
         letterColor = Colors.white;
         trailingIcon = Icons.cancel_rounded;
       } else {
@@ -429,7 +429,7 @@ class _ExplanationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tone = isCorrect ? const Color(0xFF10B981) : const Color(0xFF6366F1);
+    final tone = isCorrect ? const Color(0xFF10B981) : TColors.secondary;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -486,7 +486,7 @@ class _BloomChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (level) {
-      BloomLevel.remember => const Color(0xFF6366F1),
+      BloomLevel.remember => TColors.secondary,
       BloomLevel.understand => const Color(0xFF0EA5E9),
       BloomLevel.apply => const Color(0xFF10B981),
       BloomLevel.analyze => const Color(0xFFEC4899),
@@ -503,8 +503,8 @@ class _DifficultyChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (difficulty) {
       QuizDifficulty.easy => const Color(0xFF10B981),
-      QuizDifficulty.medium => const Color(0xFFF59E0B),
-      QuizDifficulty.hard => const Color(0xFFEF4444),
+      QuizDifficulty.medium => TColors.warning,
+      QuizDifficulty.hard => TColors.error,
     };
     return _Chip(label: difficulty.label, color: color);
   }
@@ -560,8 +560,8 @@ class _QuizResultsView extends StatelessWidget {
     final scoreColor = attempt.percentage >= 80
         ? const Color(0xFF10B981)
         : attempt.percentage >= 50
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFFEF4444);
+        ? TColors.warning
+        : TColors.error;
 
     final byBloom = attempt.bucket('by_bloom');
     final byTopic = attempt.bucket('by_topic');
@@ -712,8 +712,8 @@ class _BreakdownCard extends StatelessWidget {
             final pctColor = pct >= 0.8
                 ? const Color(0xFF10B981)
                 : pct >= 0.5
-                ? const Color(0xFFF59E0B)
-                : const Color(0xFFEF4444);
+                ? TColors.warning
+                : TColors.error;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Column(

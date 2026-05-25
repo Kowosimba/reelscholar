@@ -80,7 +80,7 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
           _FilterChips(),
 
           // Divider
-          Container(height: 1, color: const Color(0xFFF1F5F9)),
+          Container(height: 1, color: Theme.of(context).colorScheme.surfaceContainerHighest),
 
           // Results or suggestions
           Expanded(
@@ -152,7 +152,7 @@ class _SearchBar extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -227,7 +227,7 @@ class _FilterChips extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: active
                       ? AppColors.primary
-                      : const Color(0xFFF1F5F9),
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -269,8 +269,10 @@ class _UserList extends StatelessWidget {
       itemCount: users.length + 1,
       separatorBuilder: (_, i) => i == 0
           ? const SizedBox.shrink()
-          : const Divider(
-              height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+          : Divider(
+              height: 1,
+              indent: 70,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest),
       itemBuilder: (_, i) {
         if (i == 0) {
           return Padding(
@@ -408,8 +410,10 @@ class _SearchShimmer extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(top: 8),
       itemCount: 6,
-      separatorBuilder: (_, _) =>
-          const Divider(height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+      separatorBuilder: (_, _) => Divider(
+          height: 1,
+          indent: 70,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest),
       itemBuilder: (_, _) => Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: 14, vertical: 10),
@@ -418,8 +422,8 @@ class _SearchShimmer extends StatelessWidget {
             Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
             ),
@@ -431,12 +435,12 @@ class _SearchShimmer extends StatelessWidget {
                   Container(
                       height: 13,
                       width: 130,
-                      color: const Color(0xFFF1F5F9)),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                   const SizedBox(height: 6),
                   Container(
                       height: 11,
                       width: 190,
-                      color: const Color(0xFFF1F5F9)),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                 ],
               ),
             ),

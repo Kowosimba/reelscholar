@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import 'widgets/reel_widgets.dart';

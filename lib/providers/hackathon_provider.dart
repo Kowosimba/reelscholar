@@ -1,5 +1,8 @@
 // lib/providers/hackathon_provider.dart
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:reelscholar/models/hackathon_models.dart';
 import 'package:reelscholar/core/services/hackathon_service.dart';
@@ -99,6 +102,9 @@ class HackathonProvider extends ChangeNotifier {
     final team = await _service.createTeam(hackId, name);
     _myTeam = team;
     notifyListeners();
+    try {
+      await loadHackathon(hackId);
+    } catch (_) {}
     return team;
   }
 
@@ -254,7 +260,8 @@ class HackathonProvider extends ChangeNotifier {
     _commentsLoading = true;
     notifyListeners();
     try {
-      final result = await _service.getDiscussion(hackId, page: _commentsPage);
+      final result =
+          await _service.getDiscussion(hackId, page: _commentsPage);
       _comments = [..._comments, ...result.comments];
       _commentsTotal = result.total;
       _commentsPage++;
@@ -277,20 +284,23 @@ class HackathonProvider extends ChangeNotifier {
     final reply = await _service.replyToComment(hackId, commentId, body);
     final idx = _comments.indexWhere((c) => c.id == commentId);
     if (idx != -1) {
-      final updated = DiscussionComment(
-        id: _comments[idx].id,
-        hackathonId: _comments[idx].hackathonId,
-        userId: _comments[idx].userId,
-        userName: _comments[idx].userName,
-        userProfilePic: _comments[idx].userProfilePic,
-        body: _comments[idx].body,
-        likesCount: _comments[idx].likesCount,
-        likedByMe: _comments[idx].likedByMe,
-        repliesCount: _comments[idx].repliesCount + 1,
-        replies: [..._comments[idx].replies, reply],
-        createdAt: _comments[idx].createdAt,
+      final c = _comments[idx];
+      _comments[idx] = DiscussionComment(
+        id: c.id,
+        hackathonId: c.hackathonId,
+        userId: c.userId,
+        userName: c.userName,
+        userProfilePic: c.userProfilePic,
+        userBadge: c.userBadge,
+        body: c.body,
+        likesCount: c.likesCount,
+        likedByMe: c.likedByMe,
+        repliesCount: c.repliesCount + 1,
+        hasMoreReplies: c.hasMoreReplies,
+        replies: [...c.replies, reply],
+        replyTo: c.replyTo,
+        createdAt: c.createdAt,
       );
-      _comments[idx] = updated;
       notifyListeners();
     }
   }
@@ -299,7 +309,6 @@ class HackathonProvider extends ChangeNotifier {
     final idx = _comments.indexWhere((c) => c.id == commentId);
     if (idx == -1) return;
     final prev = _comments[idx];
-    // Optimistic update
     _comments[idx] = prev.copyWith(
       likedByMe: !prev.likedByMe,
       likesCount: prev.likedByMe ? prev.likesCount - 1 : prev.likesCount + 1,
@@ -308,7 +317,6 @@ class HackathonProvider extends ChangeNotifier {
     try {
       await _service.likeComment(commentId);
     } catch (_) {
-      // Revert on failure
       _comments[idx] = prev;
       notifyListeners();
     }
@@ -351,6 +359,224 @@ class HackathonProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Team chat ──────────────────────────────────────────────────────────────
+  List<HackTeamMessage> _teamChatMessages = [];
+  bool _teamChatLoading = false;
+  String? _teamChatError;
+  int _teamChatNextPage = 1;
+  bool _teamChatHasMore = true;
+  bool _teamChatRemoteTyping = false;
+  HackTeamMessage? _teamChatReplyingTo;
+  bool _teamChatIsSelfTyping = false;
+  Timer? _teamChatTypingDebounce;
+  Timer? _teamChatTypingTimeout;
+
+  List<HackTeamMessage> get teamChatMessages => _teamChatMessages;
+  bool get teamChatLoading => _teamChatLoading;
+  String? get teamChatError => _teamChatError;
+  bool get teamChatHasMore => _teamChatHasMore;
+  bool get teamChatRemoteTyping => _teamChatRemoteTyping;
+  HackTeamMessage? get teamChatReplyingTo => _teamChatReplyingTo;
+
+  Future<void> loadTeamChat(String hackId, String teamId,
+      {bool refresh = false}) async {
+    if (refresh) {
+      _teamChatNextPage = 1;
+      _teamChatMessages = [];
+      _teamChatHasMore = true;
+    }
+    _teamChatLoading = true;
+    _teamChatError = null;
+    notifyListeners();
+    try {
+      final result = await _service.getTeamChat(hackId, teamId, page: 1);
+      _teamChatMessages = result.items;
+      _teamChatNextPage = result.nextPage;
+      _teamChatHasMore = result.hasMore;
+    } catch (e) {
+      _teamChatError = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _teamChatLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreTeamChat(String hackId, String teamId) async {
+    if (!_teamChatHasMore || _teamChatLoading) return;
+    _teamChatLoading = true;
+    notifyListeners();
+    try {
+      final result = await _service.getTeamChat(
+        hackId,
+        teamId,
+        page: _teamChatNextPage,
+      );
+      _teamChatMessages.addAll(result.items);
+      _teamChatNextPage = result.nextPage;
+      _teamChatHasMore = result.hasMore;
+    } catch (_) {
+    } finally {
+      _teamChatLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendTeamChatText(
+    String hackId,
+    String teamId,
+    String text,
+    String currentUserId,
+  ) async {
+    if (text.trim().isEmpty) return;
+    final replyId = _teamChatReplyingTo?.id;
+    _teamChatReplyingTo = null;
+
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final optimistic = HackTeamMessage(
+      id: tempId,
+      hackathonId: hackId,
+      teamId: teamId,
+      sender: HackTeamMessageSender(uid: currentUserId, name: 'You'),
+      body: text.trim(),
+      type: 'text',
+      attachments: [],
+      reactions: {},
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isPending: true,
+    );
+    _teamChatMessages.insert(0, optimistic);
+    notifyListeners();
+
+    try {
+      await _stopTeamChatTypingImmediate(hackId, teamId);
+      final sent = await _service.sendTeamChatText(
+        hackId,
+        teamId,
+        text.trim(),
+        replyToId: replyId,
+      );
+      final idx = _teamChatMessages.indexWhere((m) => m.id == tempId);
+      if (idx != -1) {
+        _teamChatMessages[idx] = sent;
+        notifyListeners();
+      }
+    } catch (e) {
+      final idx = _teamChatMessages.indexWhere((m) => m.id == tempId);
+      if (idx != -1) {
+        _teamChatMessages[idx] =
+            _teamChatMessages[idx].copyWith(isFailed: true, isPending: false);
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> sendTeamChatMedia(
+    String hackId,
+    String teamId,
+    List<File> files, {
+    String? caption,
+  }) async {
+    try {
+      final sent = await _service.sendTeamChatMedia(
+        hackId,
+        teamId,
+        files,
+        caption: caption,
+      );
+      _teamChatMessages.insert(0, sent);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> reactToTeamChatMessage(
+    String hackId,
+    String teamId,
+    String messageId,
+    String emoji,
+  ) async {
+    try {
+      final reactions = await _service.reactToTeamChatMessage(
+          hackId, teamId, messageId, emoji);
+      final idx = _teamChatMessages.indexWhere((m) => m.id == messageId);
+      if (idx != -1) {
+        _teamChatMessages[idx] =
+            _teamChatMessages[idx].copyWith(reactions: reactions);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> deleteTeamChatMessage(
+    String hackId,
+    String teamId,
+    String messageId,
+  ) async {
+    final idx = _teamChatMessages.indexWhere((m) => m.id == messageId);
+    if (idx == -1) return;
+    final removed = _teamChatMessages.removeAt(idx);
+    notifyListeners();
+    try {
+      await _service.deleteTeamChatMessage(hackId, teamId, messageId);
+    } catch (_) {
+      _teamChatMessages.insert(idx, removed);
+      notifyListeners();
+    }
+  }
+
+  void setTeamChatReplyingTo(HackTeamMessage? msg) {
+    _teamChatReplyingTo = msg;
+    notifyListeners();
+  }
+
+  void onTeamChatInputChanged(String hackId, String teamId, String value) {
+    if (value.isEmpty) {
+      _teamChatTypingDebounce?.cancel();
+      if (_teamChatIsSelfTyping) {
+        _stopTeamChatTypingImmediate(hackId, teamId);
+      }
+      return;
+    }
+    if (!_teamChatIsSelfTyping) {
+      _teamChatIsSelfTyping = true;
+      _service.startTeamChatTyping(hackId, teamId);
+    }
+    _teamChatTypingDebounce?.cancel();
+    _teamChatTypingDebounce = Timer(const Duration(seconds: 3), () {
+      _stopTeamChatTypingImmediate(hackId, teamId);
+    });
+  }
+
+  Future<void> _stopTeamChatTypingImmediate(
+      String hackId, String teamId) async {
+    _teamChatTypingDebounce?.cancel();
+    if (_teamChatIsSelfTyping) {
+      _teamChatIsSelfTyping = false;
+      await _service.stopTeamChatTyping(hackId, teamId);
+    }
+  }
+
+  void setTeamChatRemoteTyping(bool typing) {
+    _teamChatRemoteTyping = typing;
+    notifyListeners();
+    if (typing) {
+      _teamChatTypingTimeout?.cancel();
+      _teamChatTypingTimeout = Timer(const Duration(seconds: 5), () {
+        _teamChatRemoteTyping = false;
+        notifyListeners();
+      });
+    }
+  }
+
+  Future<void> pollTeamChatTyping(String hackId, String teamId) async {
+    try {
+      final users =
+          await _service.getTeamChatTypingUsers(hackId, teamId);
+      setTeamChatRemoteTyping(users.isNotEmpty);
+    } catch (_) {}
+  }
+
+  // ── Clear / dispose ────────────────────────────────────────────────────────
   void clearActive() {
     _active = null;
     _submission = null;
@@ -360,6 +586,21 @@ class HackathonProvider extends ChangeNotifier {
     _mentorMessages = [];
     _openTeams = [];
     _voteStatus = null;
+    _teamChatMessages = [];
+    _teamChatNextPage = 1;
+    _teamChatHasMore = true;
+    _teamChatRemoteTyping = false;
+    _teamChatReplyingTo = null;
+    _teamChatTypingDebounce?.cancel();
+    _teamChatTypingTimeout?.cancel();
+    _teamChatIsSelfTyping = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _teamChatTypingDebounce?.cancel();
+    _teamChatTypingTimeout?.cancel();
+    super.dispose();
   }
 }

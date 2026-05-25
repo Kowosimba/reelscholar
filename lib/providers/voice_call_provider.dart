@@ -1,19 +1,22 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/voice_models.dart';
 import '../services/voice_call_service.dart';
 
-class VoiceCallProvider extends ChangeNotifier {
+class VoiceCallProvider extends ChangeNotifier with WidgetsBindingObserver {
   final VoiceCallService _service;
   final stt.SpeechToText _stt = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
 
   VoiceCallProvider({VoiceCallService? service})
-      : _service = service ?? VoiceCallService();
+      : _service = service ?? VoiceCallService() {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
+  // ── Core state ────────────────────────────────────────────────────────────
   CallState _state = CallState.idle;
   CallState get state => _state;
 
@@ -22,6 +25,9 @@ class VoiceCallProvider extends ChangeNotifier {
 
   String _topicTitle = '';
   String get topicTitle => _topicTitle;
+
+  bool _isResumed = false;
+  bool get isResumed => _isResumed;
 
   String _interimTranscript = '';
   String get interimTranscript => _interimTranscript;
@@ -44,6 +50,16 @@ class VoiceCallProvider extends ChangeNotifier {
   VoiceQuota? _quota;
   VoiceQuota? get quota => _quota;
 
+  bool _showQuizBanner = false;
+  bool get showQuizBanner => _showQuizBanner;
+
+  // Non-null when a topic just advanced; consumed by the UI for a toast.
+  String? _topicAdvancedTitle;
+  String? get topicAdvancedTitle => _topicAdvancedTitle;
+
+  VoiceEndSummary? _endSummary;
+  VoiceEndSummary? get endSummary => _endSummary;
+
   final List<CallTranscriptLine> _transcript = [];
   List<CallTranscriptLine> get transcript => List.unmodifiable(_transcript);
 
@@ -53,8 +69,23 @@ class VoiceCallProvider extends ChangeNotifier {
       : DateTime.now().difference(_startedAt!).inSeconds;
 
   Timer? _silenceTimer;
+  Timer? _rateLimitTimer;
   bool _ready = false;
 
+  // ── AppLifecycle ─────────────────────────────────────────────────────────
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      if (_callId.isNotEmpty &&
+          _state != CallState.ended &&
+          _state != CallState.idle) {
+        endCall();
+      }
+    }
+  }
+
+  // ── Initialization ────────────────────────────────────────────────────────
   Future<bool> initialize() async {
     if (_ready) return true;
 
@@ -69,14 +100,12 @@ class VoiceCallProvider extends ChangeNotifier {
       onError: (e) {
         final msg = e.errorMsg;
         if (msg == 'error_no_match' || msg == 'error_speech_timeout') {
-          // No speech detected — just wait quietly; user can tap mic to retry
           if (_state == CallState.listening) _setState(CallState.paused);
         } else if (msg == 'error_recognizer_busy') {
           Future.delayed(const Duration(milliseconds: 400), () {
             if (_state == CallState.listening) _startListening();
           });
         } else if (msg != 'error_client') {
-          // error_client fires on normal stop(); ignore it
           _setError('Mic error: $msg. Tap to retry.');
         }
       },
@@ -88,18 +117,17 @@ class VoiceCallProvider extends ChangeNotifier {
     }
 
     await _tts.setLanguage('en-US');
-    await _tts.setSpeechRate(0.9);
-    await _tts.setPitch(1.08);
+    await _tts.setSpeechRate(0.55);
+    await _tts.setPitch(1.0);
     await _tts.setVolume(1.0);
     await _tts.awaitSpeakCompletion(true);
 
-    // Try to select a Google neural voice for a more natural sound
     try {
       final voices = await _tts.getVoices as List?;
       if (voices != null) {
         final preferred = voices.firstWhere(
           (v) =>
-              (v['locale'] as String?)?.startsWith('en-US') == true &&
+              (v['locale'] as String?)?.startsWith('en') == true &&
               (v['name'] as String?)?.toLowerCase().contains('google') == true,
           orElse: () => null,
         );
@@ -114,7 +142,6 @@ class VoiceCallProvider extends ChangeNotifier {
 
     _tts.setCompletionHandler(() async {
       if (_state == CallState.speaking && !_muted) {
-        // Small delay so audio focus fully transfers back before STT starts
         await Future.delayed(const Duration(milliseconds: 150));
         _startListening();
       }
@@ -124,6 +151,7 @@ class VoiceCallProvider extends ChangeNotifier {
     return true;
   }
 
+  // ── Start call ────────────────────────────────────────────────────────────
   Future<void> startCall(String moduleId) async {
     if (!await initialize()) return;
 
@@ -131,11 +159,16 @@ class VoiceCallProvider extends ChangeNotifier {
     _transcript.clear();
     _turnCount = 0;
     _startedAt = DateTime.now();
+    _showQuizBanner = false;
+    _topicAdvancedTitle = null;
+    _endSummary = null;
 
     try {
       final session = await _service.startCall(moduleId);
       _callId = session.callId;
       _topicTitle = session.topicTitle;
+      _isResumed = session.isResumed;
+      _progress = session.progress;
       _quota = session.quota;
 
       _currentReply = session.openingLine;
@@ -149,10 +182,12 @@ class VoiceCallProvider extends ChangeNotifier {
     } on VoiceQuotaException catch (e) {
       _setError(e.message);
     } catch (e) {
-      _setError(e.toString());
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _setError(msg);
     }
   }
 
+  // ── Listening ─────────────────────────────────────────────────────────────
   Future<void> _startListening() async {
     if (_muted || _state == CallState.ended) return;
 
@@ -179,7 +214,7 @@ class VoiceCallProvider extends ChangeNotifier {
             });
           }
         },
-        listenFor: const Duration(seconds: 60),
+        listenFor: const Duration(seconds: 15),
         pauseFor: const Duration(seconds: 3),
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
@@ -192,6 +227,7 @@ class VoiceCallProvider extends ChangeNotifier {
     }
   }
 
+  // ── Turn loop ─────────────────────────────────────────────────────────────
   void _onSpeechFinal(String text) async {
     final clean = text.trim();
     if (clean.isEmpty) {
@@ -211,8 +247,26 @@ class VoiceCallProvider extends ChangeNotifier {
       final result = await _service.sendTurn(_callId, clean);
       _turnCount = result.turnCount;
       _progress = result.progress;
-      _currentReply = result.replyText;
 
+      if (result.topicAdvanced) {
+        _topicTitle = result.progress.currentTopicTitle;
+        _topicAdvancedTitle = result.progress.currentTopicTitle;
+      }
+      if (result.progress.shouldSuggestQuiz) {
+        _showQuizBanner = true;
+      }
+
+      // Update quota remaining from turn count (cap - turns used = remaining).
+      // The API doesn't return quota on turns, so decrement locally.
+      if (_quota != null) {
+        _quota = VoiceQuota(
+          usedTurns: _quota!.usedTurns + 1,
+          capTurns: _quota!.capTurns,
+          remainingTurns: (_quota!.remainingTurns - 1).clamp(0, _quota!.capTurns),
+        );
+      }
+
+      _currentReply = result.replyText;
       _transcript.add(CallTranscriptLine(
         text: result.replyText,
         isUser: false,
@@ -221,14 +275,32 @@ class VoiceCallProvider extends ChangeNotifier {
 
       _setState(CallState.speaking);
       await _tts.speak(result.replyText);
+    } on VoiceCallEndedException {
+      await endCall();
+      _errorMessage = 'Session ended.';
+      _setState(CallState.ended);
+    } on VoiceTutorUnavailableException {
+      // Keep the call alive; let the student tap retry.
+      _errorMessage = 'Tutor had trouble, tap to retry.';
+      _setState(CallState.listening);
     } on VoiceQuotaException catch (e) {
-      _setError(e.message);
+      if (e.retryAfterSeconds > 0) {
+        _errorMessage = e.message;
+        _setState(CallState.paused);
+        _rateLimitTimer?.cancel();
+        _rateLimitTimer = Timer(Duration(seconds: e.retryAfterSeconds), () {
+          if (_state == CallState.paused && !_muted) _startListening();
+        });
+      } else {
+        _setError(e.message);
+      }
     } catch (e) {
-      _setError('Network hiccup. Tap the mic to try again.');
+      _errorMessage = 'Network hiccup. Tap the mic to try again.';
       _setState(CallState.listening);
     }
   }
 
+  // ── Controls ──────────────────────────────────────────────────────────────
   Future<void> tapToTalk() async {
     if (_state == CallState.speaking) {
       await _tts.stop();
@@ -254,8 +326,16 @@ class VoiceCallProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear the topicAdvancedTitle after the UI has consumed it (shown toast).
+  void clearTopicAdvancedTitle() {
+    _topicAdvancedTitle = null;
+  }
+
+  // ── End call ──────────────────────────────────────────────────────────────
   Future<void> endCall() async {
+    if (_state == CallState.ended) return;
     _silenceTimer?.cancel();
+    _rateLimitTimer?.cancel();
     await _stt.stop();
     await _tts.stop();
 
@@ -264,15 +344,23 @@ class VoiceCallProvider extends ChangeNotifier {
 
     if (_callId.isNotEmpty) {
       try {
-        await _service.endCall(_callId, duration);
+        _endSummary = await _service.endCall(_callId, duration);
       } catch (e) {
         debugPrint('Failed to mark call ended: $e');
+        // Build a local summary so the UI still shows something.
+        _endSummary = VoiceEndSummary(
+          callId: _callId,
+          status: 'ended',
+          durationSeconds: duration,
+          turnCount: _turnCount,
+        );
       }
     }
   }
 
+  // ── Internal helpers ──────────────────────────────────────────────────────
   void _onSttStatus(String status) {
-    // STT engine stopped — handled by onResult
+    // Handled via onResult and onError callbacks.
   }
 
   void _setState(CallState s) {
@@ -287,7 +375,9 @@ class VoiceCallProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _silenceTimer?.cancel();
+    _rateLimitTimer?.cancel();
     _stt.stop();
     _tts.stop();
     super.dispose();

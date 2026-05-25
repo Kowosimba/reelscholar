@@ -15,7 +15,12 @@
       "PowerShell(ls \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\android\\\\app\\\\src\\\\main\\\\\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(grep -E \"\\\\.dart$\")"
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(xargs grep *)",
+      "PowerShell($apiPath = 'c:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\api.json'; $spec = Get-Content $apiPath -Raw | ConvertFrom-Json; $endpoints = @{}; foreach \\($path in $spec.paths.PSObject.Properties\\) { foreach \\($method in $path.Value.PSObject.Properties\\) { if \\($method.Name -in @\\('get', 'post', 'put', 'delete', 'patch'\\)\\) { $tag = @\\($method.Value.tags\\)[0]; if \\(!$tag\\) { $tag = 'uncategorized' }; if \\(!$endpoints[$tag]\\) { $endpoints[$tag] = @\\(\\) }; $endpoints[$tag] += \"$\\($method.Name.ToUpper\\(\\)\\) $\\($path.Name\\)\" } } }; foreach \\($tag in @\\($endpoints.Keys | Sort-Object\\)\\) { Write-Host \"`n$\\($tag.ToUpper\\(\\)\\):\"; $endpoints[$tag] | Sort-Object | ForEach-Object { Write-Host \"  $_\" } })",
+      "Bash(grep -v \"^$\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\lib\\\\screens\" -Directory)",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'C:\\\\Users\\\\Administrator\\\\Documents\\\\Essential Projects\\\\reelscholar\\\\lib\\\\screens\\\\tutor' -Filter '*.dart' | Select-Object Name\")"
     ]
   }
 }

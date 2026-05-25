@@ -265,7 +265,9 @@ class AuthService {
   /// a flat list of strings, handling lists-of-strings, lists-of-objects
   /// (reads the first string field), or top-level maps (returns keys).
   List<String> _extractStringList(
-      Map<String, dynamic> body, List<String> keys) {
+    Map<String, dynamic> body,
+    List<String> keys,
+  ) {
     dynamic raw;
     for (final k in keys) {
       if (body.containsKey(k) && body[k] != null) {
@@ -276,24 +278,30 @@ class AuthService {
     raw ??= body; // fall back to entire body
 
     if (raw is List) {
-      return raw.map((e) {
-        if (e is String) return e;
-        if (e is Map) {
-          // Try common name fields
-          for (final f in ['name', 'title', 'label', 'value']) {
-            if (e[f] is String) return e[f] as String;
-          }
-          // Fall back to first string value in the map
-          for (final v in e.values) {
-            if (v is String) return v;
-          }
-        }
-        return e.toString();
-      }).where((s) => s.isNotEmpty).toList();
+      return raw
+          .map((e) {
+            if (e is String) return e;
+            if (e is Map) {
+              // Try common name fields
+              for (final f in ['name', 'title', 'label', 'value']) {
+                if (e[f] is String) return e[f] as String;
+              }
+              // Fall back to first string value in the map
+              for (final v in e.values) {
+                if (v is String) return v;
+              }
+            }
+            return e.toString();
+          })
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
 
     if (raw is Map) {
-      return raw.keys.map((k) => k.toString()).where((s) => s.isNotEmpty).toList();
+      return raw.keys
+          .map((k) => k.toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
 
     return [];

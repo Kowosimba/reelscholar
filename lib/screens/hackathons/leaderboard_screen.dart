@@ -8,7 +8,8 @@ import 'package:reelscholar/models/hackathon_models.dart';
 
 class HackLeaderboardScreen extends StatefulWidget {
   final String hackId;
-  const HackLeaderboardScreen({super.key, required this.hackId});
+  final bool showAppBar;
+  const HackLeaderboardScreen({super.key, required this.hackId, this.showAppBar = true});
 
   @override
   State<HackLeaderboardScreen> createState() =>
@@ -29,8 +30,8 @@ class _HackLeaderboardScreenState extends State<HackLeaderboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
+      backgroundColor: AppColors.muted,
+      appBar: widget.showAppBar ? AppBar(
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -46,13 +47,48 @@ class _HackLeaderboardScreenState extends State<HackLeaderboardScreen> {
             color: AppColors.textPrimary,
           ),
         ),
-      ),
+      ) : null,
       body: Consumer<HackathonProvider>(
         builder: (_, p, _) {
           if (p.lbLoading && p.leaderboard.isEmpty) {
             return const Center(
                 child: CircularProgressIndicator(
                     color: AppColors.primary));
+          }
+
+          if (!p.lbLoading && p.leaderboard.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.leaderboard_outlined,
+                        size: 48, color: AppColors.textTertiary),
+                    SizedBox(height: 16),
+                    Text(
+                      'No rankings yet',
+                      style: TextStyle(
+                        fontFamily: 'Sora',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'The leaderboard will appear once voting opens.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final vs = p.voteStatus;
@@ -73,8 +109,8 @@ class _HackLeaderboardScreenState extends State<HackLeaderboardScreen> {
                     color: hasVoted
                         ? AppColors.primarySubtle
                         : canVote
-                            ? const Color(0xFFFEF3C7)
-                            : const Color(0xFFF1F5F9),
+                            ? AppColors.warningLight
+                            : AppColors.divider,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

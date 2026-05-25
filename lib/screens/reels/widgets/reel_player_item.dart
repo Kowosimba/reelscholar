@@ -313,24 +313,8 @@ class _VideoBackground extends StatelessWidget {
 
 class _Placeholder extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF8BDCD5), Color(0xFF4FD1C5), Color(0xFF6366F1)],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.play_circle_outline_rounded,
-          size: 56,
-          color: Colors.white.withValues(alpha: 0.5),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const ColoredBox(color: Colors.black);
 }
 
 // ─── Right action column ──────────────────────────────────────────────────────
@@ -418,7 +402,7 @@ class _RightActions extends StatelessWidget {
         const SizedBox(height: 10),
 
         ReelActionButton(
-          icon: Icons.reply_rounded,
+          icon: Icons.send_rounded,
           label: formatCount(reel.shareCount),
           onTap: onShare,
         ),

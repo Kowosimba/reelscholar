@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'widgets/reel_widgets.dart';
@@ -111,11 +111,18 @@ class _ReelsScreenState extends State<ReelsScreen>
                 itemBuilder: (_, i) => ReelPlayerItem(
                   reel: reels[i],
                   isActive: isReelsTab && i == _currentPage,
-                  onProfileTap: () => Navigator.pushNamed(
-                    context,
-                    '/public-profile',
-                    arguments: reels[i].uploader.uid,
-                  ),
+                  onProfileTap: () {
+                    final uid = reels[i].uploader.uid;
+                    if (uid.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Profile not available')),
+                      );
+                      return;
+                    }
+                    Navigator.pushNamed(context, '/public-profile',
+                        arguments: uid);
+                  },
                   onHashtagTap: () => Navigator.pushNamed(
                     context,
                     '/search-reels',

@@ -8,7 +8,8 @@ import 'package:reelscholar/models/hackathon_models.dart';
 
 class SubmissionScreen extends StatefulWidget {
   final String hackId;
-  const SubmissionScreen({super.key, required this.hackId});
+  final bool showAppBar;
+  const SubmissionScreen({super.key, required this.hackId, this.showAppBar = true});
 
   @override
   State<SubmissionScreen> createState() => _SubmissionScreenState();
@@ -153,7 +154,7 @@ class _SubmissionScreenState extends State<SubmissionScreen> {
     final isLocked = sub?.isFinalised == true;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.showAppBar ? AppBar(
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -183,7 +184,7 @@ class _SubmissionScreenState extends State<SubmissionScreen> {
               ),
             ),
         ],
-      ),
+      ) : null,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

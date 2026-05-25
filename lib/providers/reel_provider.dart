@@ -495,6 +495,10 @@ class ReelProvider extends ChangeNotifier {
         }
 
         notifyListeners();
+      } on ReelStatus404Exception {
+        timer.cancel();
+        _pollTimer = null;
+        notifyListeners();
       } catch (_) {
         // Network blip — keep trying.
       }

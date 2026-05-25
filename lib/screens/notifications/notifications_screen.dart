@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
+import 'package:reelscholar/core/utils/notification_router.dart';
 import 'package:reelscholar/providers/notification_provider.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
 import 'package:reelscholar/models/notification_model.dart';
@@ -15,11 +16,16 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
+  final List<ScrollController> _scrollControllers =
+      List.generate(4, (_) => ScrollController());
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 4, vsync: this);
+    for (final ctrl in _scrollControllers) {
+      ctrl.addListener(_onScroll);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prov = context.read<NotificationProvider>();
       await prov.load();
@@ -30,29 +36,53 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     });
   }
 
+  void _onScroll() {
+    final activeCtrl = _scrollControllers[_tabCtrl.index];
+    if (activeCtrl.position.pixels >=
+        activeCtrl.position.maxScrollExtent - 200) {
+      context.read<NotificationProvider>().loadMore();
+    }
+  }
+
   @override
   void dispose() {
     _tabCtrl.dispose();
+    for (final ctrl in _scrollControllers) {
+      ctrl.dispose();
+    }
     super.dispose();
   }
 
-  List<AppNotification> _filtered(
-      List<AppNotification> all, String tab) {
+  List<AppNotification> _filtered(List<AppNotification> all, String tab) {
     switch (tab) {
       case 'Social':
         return all
-            .where((n) => [
+            .where((n) => const {
                   NotifType.like,
                   NotifType.comment,
+                  NotifType.commentReply,
+                  NotifType.commentMention,
                   NotifType.follow,
-                ].contains(n.type))
+                }.contains(n.type))
             .toList();
       case 'Learning':
         return all.where((n) => n.type == NotifType.learning).toList();
       case 'System':
         return all
-            .where((n) =>
-                [NotifType.system, NotifType.achievement].contains(n.type))
+            .where((n) => const {
+                  NotifType.system,
+                  NotifType.achievement,
+                  NotifType.hackathonStarted,
+                  NotifType.studyGroupInvite,
+                  NotifType.studyGroupInviteAccepted,
+                  NotifType.studyGroupInviteDeclined,
+                  NotifType.studyGroupJoinRequest,
+                  NotifType.studyGroupJoinApproved,
+                  NotifType.studyGroupJoinRejected,
+                  NotifType.messageRequestReceived,
+                  NotifType.messageRequestAccepted,
+                  NotifType.messageRequestRejected,
+                }.contains(n.type))
             .toList();
       default:
         return all;
@@ -204,9 +234,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       );
     }
 
+    final tabs = ['All', 'Social', 'Learning', 'System'];
+
     return TabBarView(
       controller: _tabCtrl,
-      children: ['All', 'Social', 'Learning', 'System'].map((tab) {
+      children: List.generate(tabs.length, (tabIdx) {
+        final tab = tabs[tabIdx];
         final items = _filtered(prov.notifications, tab);
         if (items.isEmpty) {
           return Center(
@@ -233,26 +266,43 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           );
         }
         return ListView.separated(
+          controller: _scrollControllers[tabIdx],
           padding: EdgeInsets.zero,
-          itemCount: items.length,
+          itemCount: items.length + (prov.loadingMore ? 1 : 0),
           separatorBuilder: (_, _) =>
               const Divider(color: AppColors.border, height: 1),
-          itemBuilder: (_, i) => _NotifTile(
-            notif: items[i],
-            onTap: () async {
-              final prov = context.read<NotificationProvider>();
-              if (!items[i].isRead) {
-                await prov.markRead([items[i].id]);
-                if (mounted) {
-                  context
-                      .read<NavigationProvider>()
-                      .setUnreadNotifications(prov.unreadCount);
+          itemBuilder: (_, i) {
+            if (i == items.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+            return _NotifTile(
+              notif: items[i],
+              onTap: () async {
+                final prov = context.read<NotificationProvider>();
+                if (!items[i].isRead) {
+                  await prov.markRead([items[i].id]);
+                  if (mounted) {
+                    context
+                        .read<NavigationProvider>()
+                        .setUnreadNotifications(prov.unreadCount);
+                  }
                 }
-              }
-            },
-          ),
+                if (mounted) {
+                  NotificationRouter.route(items[i].data, context);
+                }
+              },
+            );
+          },
         );
-      }).toList(),
+      }),
     );
   }
 }
@@ -348,19 +398,46 @@ class _NotifTile extends StatelessWidget {
 
   Color _iconBg(NotifType t) => switch (t) {
         NotifType.like => AppColors.errorLight,
-        NotifType.comment => AppColors.primarySubtle,
+        NotifType.comment ||
+        NotifType.commentReply ||
+        NotifType.commentMention =>
+          AppColors.primarySubtle,
         NotifType.follow => AppColors.successLight,
         NotifType.achievement => AppColors.warningLight,
         NotifType.learning => AppColors.primarySubtle,
+        NotifType.hackathonStarted => AppColors.warningLight,
+        NotifType.studyGroupInvite ||
+        NotifType.studyGroupInviteAccepted ||
+        NotifType.studyGroupInviteDeclined ||
+        NotifType.studyGroupJoinRequest ||
+        NotifType.studyGroupJoinApproved ||
+        NotifType.studyGroupJoinRejected =>
+          AppColors.successLight,
+        NotifType.messageRequestReceived ||
+        NotifType.messageRequestAccepted ||
+        NotifType.messageRequestRejected =>
+          AppColors.infoLight,
         NotifType.system => AppColors.muted,
       };
 
   String _emoji(NotifType t) => switch (t) {
         NotifType.like => '❤️',
         NotifType.comment => '💬',
+        NotifType.commentReply => '↩️',
+        NotifType.commentMention => '@',
         NotifType.follow => '👤',
         NotifType.achievement => '🏆',
         NotifType.learning => '📚',
+        NotifType.hackathonStarted => '🚀',
+        NotifType.studyGroupInvite => '👥',
+        NotifType.studyGroupInviteAccepted => '✅',
+        NotifType.studyGroupInviteDeclined => '❌',
+        NotifType.studyGroupJoinRequest => '🔔',
+        NotifType.studyGroupJoinApproved => '✅',
+        NotifType.studyGroupJoinRejected => '❌',
+        NotifType.messageRequestReceived => '✉️',
+        NotifType.messageRequestAccepted => '✅',
+        NotifType.messageRequestRejected => '❌',
         NotifType.system => '🔔',
       };
 }

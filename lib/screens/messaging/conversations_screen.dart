@@ -187,7 +187,7 @@ class _IBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: AppColors.muted,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.border),
         ),
@@ -209,7 +209,7 @@ class _SearchBar extends StatelessWidget {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: AppColors.divider,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -271,7 +271,7 @@ class _FilterTabs extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: active ? AppColors.primary : const Color(0xFFF1F5F9),
+                    color: active ? AppColors.primary : AppColors.divider,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -318,9 +318,11 @@ class _ConvTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: unread > 0 ? const Color(0xFFF0FDF9) : Colors.white,
+          color: unread > 0
+              ? AppColors.bg
+              : Theme.of(context).colorScheme.surface,
           border: const Border(
-            bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1),
+            bottom: BorderSide(color: AppColors.divider, width: 1),
           ),
         ),
         child: Row(
@@ -470,7 +472,7 @@ class _ConvAvatar extends StatelessWidget {
               width: 16,
               height: 16,
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
+                color: AppColors.secondary,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
@@ -502,7 +504,7 @@ class _ConvsShimmer extends StatelessWidget {
         (i) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+            border: Border(bottom: BorderSide(color: AppColors.divider)),
           ),
           child: Row(
             children: [
@@ -510,7 +512,7 @@ class _ConvsShimmer extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF1F5F9),
+                  color: AppColors.divider,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -522,13 +524,13 @@ class _ConvsShimmer extends StatelessWidget {
                     Container(
                       height: 13,
                       width: 120,
-                      color: const Color(0xFFF1F5F9),
+                      color: AppColors.divider,
                     ),
                     const SizedBox(height: 6),
                     Container(
                       height: 11,
                       width: double.infinity,
-                      color: const Color(0xFFF1F5F9),
+                      color: AppColors.divider,
                     ),
                   ],
                 ),

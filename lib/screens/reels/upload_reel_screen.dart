@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'package:video_player/video_player.dart';
 

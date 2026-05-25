@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/models/reel_models.dart';
 import 'package:reelscholar/providers/reel_provider.dart';
 import 'widgets/reel_widgets.dart';
@@ -390,11 +391,3 @@ String _humanReason(String? reason) {
   };
 }
 
-// Reference to AppColors — include in standalone build
-class AppColors {
-  static const Color primary = Color(0xFF0D9488);
-  static const Color primarySubtle = Color(0xFFCCFBF1);
-  static const Color error = Color(0xFFEF4444);
-  static const Color errorLight = Color(0xFFFEE2E2);
-  static const Color border = Color(0xFFE2E8F0);
-}

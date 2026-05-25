@@ -452,15 +452,8 @@ class ReelThumbnailCard extends StatelessWidget {
 
 class _DarkBg extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF1a2740), Color(0xFF0d1520)],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      const ColoredBox(color: Colors.black);
 }
 
 // ─── Count formatter ──────────────────────────────────────────────────────────

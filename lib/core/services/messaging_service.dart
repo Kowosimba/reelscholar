@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:reelscholar/models/messaging_models.dart';
 
+
 import '../constants/api_constants.dart';
 
 /// Messaging API — OpenAPI tags `Conversation`, `MessageRequest`.
@@ -77,36 +78,34 @@ class MessagingService {
         .toList();
   }
 
-  /// GET /conversations/{id}/messages — returns newest-first list + pagination.
-  Future<({List<ConvMessage> items, int currentPage, int lastPage})>
+  /// GET /conversations/{id}/messages — cursor-paginated, newest-first.
+  Future<({List<ConvMessage> items, String? nextCursor, bool hasMore})>
       getMessages(
     String conversationId, {
+    String? cursor,
     int perPage = 50,
-    int page = 1,
   }) async {
+    final params = <String, String>{'per_page': '$perPage'};
+    if (cursor != null) params['cursor'] = cursor;
     final uri = Uri.parse(
       '${ApiConstants.baseUrl}/conversations/$conversationId/messages',
-    ).replace(queryParameters: {'per_page': '$perPage', 'page': '$page'});
+    ).replace(queryParameters: params);
     final res = await http.get(uri, headers: await _headers());
     _assertOk(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final raw = body['data'];
-    List<dynamic> list = [];
-    if (raw is List) {
-      list = raw;
-    } else if (raw is Map<String, dynamic>) {
-      list = raw['data'] as List? ?? [];
-    }
+    final List<dynamic> list = raw is List ? raw : [];
+    final meta = body['meta'] as Map<String, dynamic>? ?? {};
     final items = list
         .map((m) => ConvMessage.fromJson(m as Map<String, dynamic>))
         .toList();
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final meta = body['meta'] as Map<String, dynamic>?;
-    final current =
-        int.tryParse(meta?['current_page']?.toString() ?? '$page') ?? page;
-    final last =
-        int.tryParse(meta?['last_page']?.toString() ?? '$current') ?? current;
-    return (items: items, currentPage: current, lastPage: last);
+    return (
+      items: items,
+      nextCursor: meta['next_cursor']?.toString(),
+      hasMore: meta['has_more'] == true ||
+          meta['has_more']?.toString() == 'true',
+    );
   }
 
   /// POST /conversations/{id}/messages/text
@@ -330,6 +329,21 @@ class MessagingService {
     );
   }
 
+  /// GET /conversations/{id}/typing
+  Future<List<String>> getTypingUsers(String conversationId) async {
+    final res = await http.get(
+      Uri.parse(
+        '${ApiConstants.baseUrl}/conversations/$conversationId/typing',
+      ),
+      headers: await _headers(),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) return [];
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'];
+    if (data is List) return data.map((e) => e.toString()).toList();
+    return [];
+  }
+
   /// GET /message-requests
   Future<List<MessageRequest>> getMessageRequests({
     String status = 'pending',
@@ -389,5 +403,52 @@ class MessagingService {
       headers: await _headers(),
     );
     _assertOk(res);
+  }
+
+  /// GET /message-requests/sent
+  Future<List<MessageRequest>> getSentMessageRequests({
+    int perPage = 20,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/message-requests/sent')
+        .replace(queryParameters: {'per_page': '$perPage'});
+    final res = await http.get(uri, headers: await _headers());
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'] as List? ?? [];
+    return data
+        .map((r) => MessageRequest.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /message-requests/pending-count
+  Future<int> getPendingCount() async {
+    final res = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/message-requests/pending-count'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>? ?? {};
+    return int.tryParse(data['count']?.toString() ?? '0') ?? 0;
+  }
+
+  /// DELETE /message-requests/{id}
+  Future<void> deleteMessageRequest(String requestId) async {
+    final res = await http.delete(
+      Uri.parse('${ApiConstants.baseUrl}/message-requests/$requestId'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+  }
+
+  /// GET /message-requests/check/{userId}
+  Future<CheckStatusResult> checkStatus(String userId) async {
+    final res = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/message-requests/check/$userId'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return CheckStatusResult.fromJson(body['data'] as Map<String, dynamic>);
   }
 }

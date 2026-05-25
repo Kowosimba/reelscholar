@@ -12,6 +12,7 @@ class AppColors {
 
   static const Color secondary = Color(0xFF6366F1); // --acc
   static const Color secondaryLight = Color(0xFF818CF8); // --acc2
+  static const Color secondarySubtle = Color(0xFFEDE9FE); // indigo tint — icon/chip bg
 
   // ── Semantic ─────────────────────────────────────────────────────────────────
   static const Color warning = Color(0xFFF59E0B); // --warn
@@ -53,9 +54,10 @@ class AppColors {
   static const Color backgroundMuted = muted;
   static const Color muted = Color(0xFFF8FAFC); // --bg3
 
-  // ── Borders ──────────────────────────────────────────────────────────────────
+  // ── Borders & dividers ───────────────────────────────────────────────────────
   static const Color border = Color(0xFFE2E8F0); // --border
   static const Color borderMedium = Color(0xFFCBD5E1); // --border2
+  static const Color divider = Color(0xFFF1F5F9); // lighter divider / row separator
 
   // ── Text ────────────────────────────────────────────────────────────────────
   static const Color textPrimary = Color(0xFF0F172A); // --txt
@@ -63,6 +65,7 @@ class AppColors {
   static const Color textTertiary = Color(0xFF94A3B8); // --txt3
 
   // ── Dark surfaces (reels, chat, drawer overlay) ──────────────────────────────
+  static const Color darkNav = Color(0xFF020617); // deepest dark — system nav bar bg
   static const Color dark = Color(0xFF0F172A);
   static const Color darkCard = Color(0xFF1E293B);
   static const Color darkSurface = Color(0xFF1E293B);

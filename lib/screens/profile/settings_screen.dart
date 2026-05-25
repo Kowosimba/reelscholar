@@ -28,7 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.muted,
       appBar: AppBar(
         elevation: 0,
         leading: IconButton(
@@ -54,8 +54,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               _NavTile(
                 icon: Icons.person_outline_rounded,
-                iconBg: const Color(0xFFEFF6FF),
-                iconColor: const Color(0xFF3B82F6),
+                iconBg: AppColors.infoLight,
+                iconColor: AppColors.info,
                 label: 'Edit Profile',
                 onTap: () => Navigator.push(
                   context,
@@ -75,8 +75,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _NavTile(
                 icon: Icons.shield_outlined,
-                iconBg: const Color(0xFFF1F5F9),
-                iconColor: const Color(0xFF64748B),
+                iconBg: AppColors.divider,
+                iconColor: AppColors.darkMuted,
                 label: 'Privacy & Security',
                 onTap: () => Navigator.push(
                   context,
@@ -95,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 14),
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.border),
                   ),
@@ -120,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _ToggleTile(
                     icon: Icons.favorite_rounded,
-                    iconBg: const Color(0xFFFEE2E2),
+                    iconBg: AppColors.errorLight,
                     iconColor: AppColors.error,
                     label: 'Likes',
                     subtitle: 'When someone likes your reel',
@@ -130,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _ToggleTile(
                     icon: Icons.comment_rounded,
-                    iconBg: const Color(0xFFDCFCE7),
+                    iconBg: AppColors.successLight,
                     iconColor: const Color(0xFF16A34A),
                     label: 'Comments',
                     subtitle: 'When someone comments on your reel',
@@ -140,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _ToggleTile(
                     icon: Icons.chat_bubble_rounded,
-                    iconBg: const Color(0xFFEDE9FE),
+                    iconBg: AppColors.secondarySubtle,
                     iconColor: const Color(0xFF7C3AED),
                     label: 'Direct Messages',
                     subtitle: 'New message requests and chats',
@@ -150,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _ToggleTile(
                     icon: Icons.group_rounded,
-                    iconBg: const Color(0xFFFEF3C7),
+                    iconBg: AppColors.warningLight,
                     iconColor: const Color(0xFFD97706),
                     label: 'Study Groups',
                     subtitle: 'Group activity and join requests',
@@ -190,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               _NavTile(
                 icon: Icons.dark_mode_rounded,
-                iconBg: const Color(0xFF1E293B),
+                iconBg: AppColors.darkCard,
                 iconColor: Colors.white,
                 label: 'Appearance',
                 subtitle: 'Light / Dark / System',
@@ -198,7 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _NavTile(
                 icon: Icons.info_outline_rounded,
-                iconBg: const Color(0xFFF1F5F9),
+                iconBg: AppColors.divider,
                 iconColor: AppColors.textSecondary,
                 label: 'About ReelScholar',
                 subtitle: 'Version 1.0.0',
@@ -206,7 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _NavTile(
                 icon: Icons.help_outline_rounded,
-                iconBg: const Color(0xFFDCFCE7),
+                iconBg: AppColors.successLight,
                 iconColor: const Color(0xFF16A34A),
                 label: 'Help & Support',
                 onTap: () {},
@@ -574,7 +574,7 @@ class _SettingsCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
@@ -584,8 +584,12 @@ class _SettingsCard extends StatelessWidget {
             children: [
               e.value,
               if (e.key < children.length - 1)
-                const Divider(
-                    height: 1, indent: 56, color: Color(0xFFF1F5F9)),
+                Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest),
             ],
           );
         }).toList(),

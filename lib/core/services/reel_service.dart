@@ -125,6 +125,9 @@ class ReelService {
       Uri.parse('${ApiConstants.baseUrl}/reels/$reelId/status'),
       headers: await _headers(),
     );
+    if (r.statusCode == 404) {
+      throw const ReelStatus404Exception();
+    }
     final body = _parse(r);
     final data = body['data'] as Map<String, dynamic>;
     return (
@@ -332,4 +335,12 @@ class ReelService {
     final data = body['data'] as List<dynamic>? ?? [];
     return data.cast<Map<String, dynamic>>();
   }
+}
+
+class ReelStatus404Exception implements Exception {
+  final String message;
+  const ReelStatus404Exception([this.message = 'Reel status endpoint or reel not found (404)']);
+
+  @override
+  String toString() => message;
 }

@@ -27,19 +27,23 @@ class NotificationService {
     }
   }
 
-  /// GET /notifications — returns notifications list + unread count.
-  Future<({List<AppNotification> items, int unreadCount})> getNotifications() async {
-    final res = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/notifications'),
-      headers: await _headers(),
-    );
+  /// GET /notifications — returns notifications list + unread count + hasMore.
+  Future<({List<AppNotification> items, int unreadCount, bool hasMore})>
+      getNotifications({int page = 1}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/notifications')
+        .replace(queryParameters: {'page': '$page'});
+    final res = await http.get(uri, headers: await _headers());
     _assertOk(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final unreadCount = (body['unread_count'] as num?)?.toInt() ?? 0;
     final data = body['data'];
     List<dynamic> rawList = [];
+    int currentPage = page;
+    int lastPage = page;
     if (data is Map<String, dynamic>) {
       rawList = data['data'] as List? ?? [];
+      currentPage = (data['current_page'] as num?)?.toInt() ?? page;
+      lastPage = (data['last_page'] as num?)?.toInt() ?? page;
     } else if (data is List) {
       rawList = data;
     }
@@ -47,7 +51,11 @@ class NotificationService {
         .whereType<Map<String, dynamic>>()
         .map(AppNotification.fromJson)
         .toList();
-    return (items: items, unreadCount: unreadCount);
+    return (
+      items: items,
+      unreadCount: unreadCount,
+      hasMore: currentPage < lastPage,
+    );
   }
 
   /// POST /notifications/read — pass null ids to mark all as read.
@@ -55,7 +63,29 @@ class NotificationService {
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/notifications/read'),
       headers: await _headers(),
-      body: jsonEncode({'ids': ids}),
+      body: jsonEncode(ids != null ? {'ids': ids} : {}),
+    );
+    _assertOk(res);
+  }
+
+  /// GET /profile/notification-preferences
+  Future<Map<String, bool>> getPreferences() async {
+    final res = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/profile/notification-preferences'),
+      headers: await _headers(),
+    );
+    _assertOk(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>? ?? {};
+    return data.map((k, v) => MapEntry(k, v == true));
+  }
+
+  /// PUT /profile/notification-preferences — send only changed keys.
+  Future<void> updatePreferences(Map<String, bool> prefs) async {
+    final res = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/profile/notification-preferences'),
+      headers: await _headers(),
+      body: jsonEncode(prefs),
     );
     _assertOk(res);
   }

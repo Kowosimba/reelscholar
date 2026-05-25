@@ -111,7 +111,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 ),
                 const SizedBox(width: 8),
                 _TabChip(
-                  label: 'Groups',
+                  label: 'Study Groups',
                   selected: _showGroups,
                   onTap: () => _switchTab(true),
                 ),
@@ -139,7 +139,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   );
                 }
                 var list = _showGroups
-                    ? allConvs.where((c) => c.isGroup).toList()
+                    ? allConvs.where((c) => c.studyGroupId != null).toList()
                     : allConvs.where((c) => c.isDirect).toList();
                 if (_searchQuery.isNotEmpty) {
                   final q = _searchQuery.toLowerCase();
@@ -155,7 +155,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     title: _searchQuery.isNotEmpty
                         ? 'No matching conversations'
                         : _showGroups
-                            ? 'No group chats yet'
+                            ? 'No study groups yet'
                             : 'No direct messages yet',
                     subtitle: _searchQuery.isNotEmpty
                         ? 'Try a different name'
@@ -177,6 +177,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     if (_showGroups) await p.loadGroupConversations();
                   },
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 88),
                     itemCount: list.length,
                     itemBuilder: (_, i) {
                       final c = list[i];

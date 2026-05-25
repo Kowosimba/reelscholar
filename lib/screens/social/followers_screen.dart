@@ -67,7 +67,7 @@ class _FollowersScreenState extends State<FollowersScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         leading: IconButton(
@@ -201,10 +201,12 @@ class _UserListTab extends StatelessWidget {
           },
           child: ListView.separated(
             itemCount: users.length,
-            separatorBuilder: (_, _) => const Divider(
-                height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+            separatorBuilder: (_, _) => Divider(
+                height: 1,
+                indent: 70,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest),
             itemBuilder: (_, i) => Container(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               child: UserTile(user: users[i]),
             ),
           ),
@@ -273,18 +275,20 @@ class _ListShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       itemCount: 8,
-      separatorBuilder: (_, _) =>
-          const Divider(height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+      separatorBuilder: (_, _) => Divider(
+          height: 1,
+          indent: 70,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest),
       itemBuilder: (_, _) => Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
             ),
@@ -296,12 +300,12 @@ class _ListShimmer extends StatelessWidget {
                   Container(
                       height: 12,
                       width: 120,
-                      color: const Color(0xFFF1F5F9)),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                   const SizedBox(height: 6),
                   Container(
                       height: 10,
                       width: 180,
-                      color: const Color(0xFFF1F5F9)),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest),
                 ],
               ),
             ),

@@ -100,7 +100,7 @@ class MessagingProvider extends ChangeNotifier {
   bool _messagesLoading = false;
   String? _messagesError;
   bool _hasMoreMessages = true;
-  int _messagePage = 1;
+  String? _msgNextCursor;
 
   // Study-group chat state (cursor-based pagination, different API)
   String? _activeStudyGroupId;
@@ -128,7 +128,7 @@ class MessagingProvider extends ChangeNotifier {
     _sgNextCursor = null;
     _activeConversation = conversation;
     _messages = [];
-    _messagePage = 1;
+    _msgNextCursor = null;
     _hasMoreMessages = true;
     _replyingTo = null;
     _remoteTyping = false;
@@ -168,7 +168,7 @@ class MessagingProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
     _messages = [];
-    _messagePage = 1;
+    _msgNextCursor = null;
     _hasMoreMessages = true;
     _replyingTo = null;
     _remoteTyping = false;
@@ -195,21 +195,16 @@ class MessagingProvider extends ChangeNotifier {
           _messages = result.items;
         }
       } else {
-        final page = append ? _messagePage : 1;
         final result = await _service.getMessages(
           _activeConversation!.id,
-          page: page,
+          cursor: append ? _msgNextCursor : null,
         );
-        if (result.items.isEmpty) {
-          _hasMoreMessages = false;
+        _hasMoreMessages = result.hasMore;
+        _msgNextCursor = result.nextCursor;
+        if (append) {
+          _messages.addAll(result.items);
         } else {
-          if (append) {
-            _messages.addAll(result.items);
-          } else {
-            _messages = result.items;
-          }
-          _messagePage = result.currentPage + 1;
-          _hasMoreMessages = result.currentPage < result.lastPage;
+          _messages = result.items;
         }
       }
     } catch (e) {
@@ -509,12 +504,26 @@ class MessagingProvider extends ChangeNotifier {
     _replyingTo = null;
     _remoteTyping = false;
     _hasMoreMessages = true;
-    _messagePage = 1;
+    _msgNextCursor = null;
     // Defer notification — this is often called from dispose() during widget
     // tree teardown when the framework is locked and notifyListeners() would
     // throw a setState-during-build assertion.
     Future.microtask(notifyListeners);
   }
+
+  // ── Check connection status ───────────────────────────────────────────────
+  Future<CheckStatusResult> checkStatus(String userId) =>
+      _service.checkStatus(userId);
+
+  // ── Delete / cancel a sent request ───────────────────────────────────────
+  Future<void> deleteRequest(String requestId) async {
+    await _service.deleteMessageRequest(requestId);
+    _requests.removeWhere((r) => r.id == requestId);
+    notifyListeners();
+  }
+
+  // ── Pending count (for badges) ────────────────────────────────────────────
+  Future<int> fetchPendingCount() => _service.getPendingCount();
 
   @override
   void dispose() {

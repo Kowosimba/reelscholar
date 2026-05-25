@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
 import 'package:reelscholar/providers/theme_provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 
 class AppDrawer extends StatelessWidget {
   final DrawerUser? user;
@@ -20,8 +20,8 @@ class AppDrawer extends StatelessWidget {
     final theme = context.watch<ThemeProvider>();
     final nav = context.watch<NavigationProvider>();
     
-    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final labelColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final bgColor = isDark ? AppColors.dark : Colors.white;
+    final labelColor = isDark ? AppColors.textTertiary : AppColors.darkMuted;
 
     return Drawer(
       backgroundColor: bgColor,
@@ -295,8 +295,8 @@ class _DrawerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = color ?? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
-    final textColor = color ?? (isDark ? Colors.white : const Color(0xFF1E293B));
+    final iconColor = color ?? (isDark ? AppColors.textTertiary : AppColors.darkMuted);
+    final textColor = color ?? (isDark ? Colors.white : AppColors.darkCard);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),

@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/hackathon_provider.dart';
+import 'package:reelscholar/providers/auth_provider.dart';
 import 'package:reelscholar/models/hackathon_models.dart';
 import 'submission_screen.dart';
 import 'leaderboard_screen.dart';
 import 'discussion_screen.dart';
 import 'mentor_chat_screen.dart';
+import 'team_chat_screen.dart';
 
 class HackathonDetailScreen extends StatefulWidget {
   final String hackId;
@@ -21,13 +23,15 @@ class HackathonDetailScreen extends StatefulWidget {
 }
 
 class _HackathonDetailScreenState extends State<HackathonDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabs;
+  int _prevTabCount = 0;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this);
+    _prevTabCount = 3;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HackathonProvider>().loadHackathon(widget.hackId);
     });
@@ -36,11 +40,67 @@ class _HackathonDetailScreenState extends State<HackathonDetailScreen>
   @override
   void dispose() {
     _tabs.dispose();
-    // We don't necessarily want to clear active here if we might go to sub-screens
-    // but the source did it. However, if we go to SubmissionScreen and come back,
-    // we want the data.
-    // context.read<HackathonProvider>().clearActive();
     super.dispose();
+  }
+
+  List<({String label, Widget body})> _buildTabs(
+      Hackathon hack, String currentUid) {
+    final tabs = <({String label, Widget body})>[
+      (label: 'Overview', body: _OverviewTab(hack: hack)),
+      (label: 'Team', body: _TeamTab(hack: hack)),
+      (label: 'Discussion', body: _DiscussionTab(hackId: hack.id)),
+    ];
+
+    final status = hack.status;
+    final hasTeam = hack.hasTeam && hack.myTeamId != null;
+
+    if (hasTeam &&
+        (status == HackStatus.inProgress ||
+            status == HackStatus.submissionClosed)) {
+      tabs.add((
+        label: 'Chat',
+        body: _TeamChatTab(hackId: hack.id, teamId: hack.myTeamId!),
+      ));
+      tabs.add((
+        label: 'Submit',
+        body: _SubmissionTab(hackId: hack.id),
+      ));
+    }
+
+    if (hasTeam && status == HackStatus.votingOpen) {
+      tabs.add((
+        label: 'Chat',
+        body: _TeamChatTab(hackId: hack.id, teamId: hack.myTeamId!),
+      ));
+      tabs.add((
+        label: 'Vote',
+        body: _LeaderboardTab(hackId: hack.id, voteMode: true),
+      ));
+      tabs.add((
+        label: 'Leaderboard',
+        body: _LeaderboardTab(hackId: hack.id, voteMode: false),
+      ));
+    }
+
+    if (hasTeam && status == HackStatus.judging) {
+      tabs.add((
+        label: 'Chat',
+        body: _TeamChatTab(hackId: hack.id, teamId: hack.myTeamId!),
+      ));
+      tabs.add((
+        label: 'Leaderboard',
+        body: _LeaderboardTab(hackId: hack.id, voteMode: false),
+      ));
+    }
+
+    if (status == HackStatus.completed || status == HackStatus.ended) {
+      tabs.add((
+        label: 'Leaderboard',
+        body: _LeaderboardTab(hackId: hack.id, voteMode: false),
+      ));
+    }
+
+    return tabs;
   }
 
   @override
@@ -67,19 +127,42 @@ class _HackathonDetailScreenState extends State<HackathonDetailScreen>
         final hack = p.active;
         if (hack == null) return const Scaffold(body: SizedBox.shrink());
 
+        final currentUid =
+            context.read<AuthProvider>().user?.uid ?? '';
+        final tabs = _buildTabs(hack, currentUid);
+        final tabCount = tabs.length;
+
+        if (tabCount != _prevTabCount) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() {
+              _tabs.dispose();
+              _tabs = TabController(length: tabCount, vsync: this);
+              _prevTabCount = tabCount;
+            });
+          });
+        }
+
+        final isScrollable = tabCount > 4;
+
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF0F172A)
+              : const Color(0xFFF8FAFC),
           body: NestedScrollView(
             headerSliverBuilder: (_, _) => [
               _HackSliverAppBar(hack: hack),
             ],
             body: Column(
               children: [
-                // Tab bar
                 Container(
                   color: Colors.white,
                   child: TabBar(
                     controller: _tabs,
+                    isScrollable: isScrollable,
+                    tabAlignment: isScrollable
+                        ? TabAlignment.start
+                        : TabAlignment.fill,
                     indicatorColor: AppColors.primary,
                     indicatorWeight: 2.5,
                     labelColor: AppColors.primary,
@@ -92,21 +175,15 @@ class _HackathonDetailScreenState extends State<HackathonDetailScreen>
                         fontFamily: 'DM Sans',
                         fontSize: 13,
                         fontWeight: FontWeight.w500),
-                    tabs: const [
-                      Tab(text: 'Overview'),
-                      Tab(text: 'Team'),
-                      Tab(text: 'Resources'),
-                    ],
+                    tabs: tabs
+                        .map((t) => Tab(text: t.label))
+                        .toList(),
                   ),
                 ),
                 Expanded(
                   child: TabBarView(
                     controller: _tabs,
-                    children: [
-                      _OverviewTab(hack: hack),
-                      _TeamTab(hack: hack),
-                      _ResourcesTab(hack: hack),
-                    ],
+                    children: tabs.map((t) => t.body).toList(),
                   ),
                 ),
               ],
@@ -623,7 +700,7 @@ class _TeamTabState extends State<_TeamTab> {
       return _MyTeamView(hack: hack);
     }
 
-    if (!hack.status.canRegister && !hack.isRegistered) {
+    if (!hack.status.canRegister && !hack.hasTeam) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -663,9 +740,23 @@ class _TeamTabState extends State<_TeamTab> {
                 TextFormField(
                   controller: _teamNameCtrl,
                   maxLength: 60,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
                     hintText: 'Team name',
-                    prefixIcon: Icon(Icons.group_add_rounded, size: 20),
+                    hintStyle: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 14,
+                      color: AppColors.textTertiary,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.group_add_rounded,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                     counterText: '',
                   ),
                 ),
@@ -705,9 +796,24 @@ class _TeamTabState extends State<_TeamTab> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _inviteCtrl,
-                  decoration: const InputDecoration(
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
                     hintText: 'Enter invite code',
-                    prefixIcon: Icon(Icons.vpn_key_rounded, size: 20),
+                    hintStyle: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 14,
+                      color: AppColors.textTertiary,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.vpn_key_rounded,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1067,20 +1173,30 @@ class _OpenTeamsSectionState extends State<_OpenTeamsSection> {
   }
 }
 
-class _OpenTeamTile extends StatelessWidget {
+class _OpenTeamTile extends StatefulWidget {
   final OpenTeam team;
   final String hackId;
   const _OpenTeamTile({required this.team, required this.hackId});
 
   @override
+  State<_OpenTeamTile> createState() => _OpenTeamTileState();
+}
+
+class _OpenTeamTileState extends State<_OpenTeamTile> {
+  bool _joining = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
+        ),
       ),
       child: Row(
         children: [
@@ -1089,16 +1205,16 @@ class _OpenTeamTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  team.name,
-                  style: const TextStyle(
+                  widget.team.name,
+                  style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
-                  'Led by ${team.leaderName} · ${team.slotsLeft} slot${team.slotsLeft == 1 ? '' : 's'} left',
+                  'Led by ${widget.team.leaderName} · ${widget.team.slotsLeft} slot${widget.team.slotsLeft == 1 ? '' : 's'} left',
                   style: const TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 11,
@@ -1110,159 +1226,54 @@ class _OpenTeamTile extends StatelessWidget {
           ),
           SizedBox(
             height: 32,
+            width: 64,
             child: ElevatedButton(
-              onPressed: () async {
-                try {
-                  await context
-                      .read<HackathonProvider>()
-                      .joinTeam(hackId, team.inviteCode);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(e.toString()),
-                      backgroundColor: AppColors.error,
-                      behavior: SnackBarBehavior.floating,
-                    ));
-                  }
-                }
-              },
+              onPressed: _joining
+                  ? null
+                  : () async {
+                      setState(() => _joining = true);
+                      try {
+                        await context
+                            .read<HackathonProvider>()
+                            .joinTeam(widget.hackId, widget.team.inviteCode);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(e.toString()),
+                            backgroundColor: AppColors.error,
+                            behavior: SnackBarBehavior.floating,
+                          ));
+                        }
+                      } finally {
+                        if (mounted) setState(() => _joining = false);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
                 elevation: 0,
               ),
-              child: const Text(
-                'Join',
-                style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
-              ),
+              child: _joining
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Join',
+                      style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white),
+                    ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Resources tab ─────────────────────────────────────────────────────────────
-
-class _ResourcesTab extends StatelessWidget {
-  final Hackathon hack;
-  const _ResourcesTab({required this.hack});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _SCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _SCardTitle('Quick Links'),
-                const SizedBox(height: 10),
-                _ResourceRow(
-                  icon: Icons.forum_rounded,
-                  label: 'Discussion',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          DiscussionScreen(hackId: hack.id),
-                    ),
-                  ),
-                ),
-                if (hack.status.showLeaderboard)
-                  _ResourceRow(
-                    icon: Icons.leaderboard_rounded,
-                    label: 'Leaderboard',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            HackLeaderboardScreen(hackId: hack.id),
-                      ),
-                    ),
-                  ),
-                if (hack.hasTeam && hack.myTeamId != null)
-                  _ResourceRow(
-                    icon: Icons.school_rounded,
-                    label: 'Mentor Chat',
-                    isLast: true,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MentorChatScreen(
-                            hackId: hack.id, teamId: hack.myTeamId!),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResourceRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isLast;
-
-  const _ResourceRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isLast = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : const Border(
-                  bottom: BorderSide(color: Color(0xFFF1F5F9))),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.primarySubtle,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 16, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
-          ],
-        ),
       ),
     );
   }
@@ -1275,16 +1286,21 @@ class _SCard extends StatelessWidget {
   const _SCard({required this.child});
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : AppColors.border,
         ),
-        child: child,
-      );
+      ),
+      child: child,
+    );
+  }
 }
 
 class _SCardTitle extends StatelessWidget {
@@ -1294,11 +1310,51 @@ class _SCardTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Sora',
           fontSize: 13,
           fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       );
+}
+
+// ── Phase-gated tab body wrappers ─────────────────────────────────────────────
+
+class _TeamChatTab extends StatelessWidget {
+  final String hackId;
+  final String teamId;
+  const _TeamChatTab({required this.hackId, required this.teamId});
+
+  @override
+  Widget build(BuildContext context) =>
+      TeamChatScreen(hackId: hackId, teamId: teamId, showAppBar: false);
+}
+
+class _SubmissionTab extends StatelessWidget {
+  final String hackId;
+  const _SubmissionTab({required this.hackId});
+
+  @override
+  Widget build(BuildContext context) =>
+      SubmissionScreen(hackId: hackId, showAppBar: false);
+}
+
+class _DiscussionTab extends StatelessWidget {
+  final String hackId;
+  const _DiscussionTab({required this.hackId});
+
+  @override
+  Widget build(BuildContext context) =>
+      DiscussionScreen(hackId: hackId, showAppBar: false);
+}
+
+class _LeaderboardTab extends StatelessWidget {
+  final String hackId;
+  final bool voteMode;
+  const _LeaderboardTab({required this.hackId, required this.voteMode});
+
+  @override
+  Widget build(BuildContext context) =>
+      HackLeaderboardScreen(hackId: hackId, showAppBar: false);
 }

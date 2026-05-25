@@ -1,10 +1,14 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
+import 'package:reelscholar/core/utils/notification_router.dart';
 import 'package:reelscholar/providers/auth_provider.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
+import 'package:reelscholar/providers/notification_provider.dart';
 import 'package:reelscholar/providers/profile_provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/screens/reels/reels_screen.dart';
 import 'package:reelscholar/screens/profile/my_profile_screen.dart';
 import 'package:reelscholar/screens/study_groups/study_groups_screen.dart';
@@ -13,6 +17,15 @@ import 'navigation/app_bottom_nav_bar.dart';
 import 'navigation/app_drawer.dart';
 import '../providers/theme_provider.dart';
 import 'chats/chats_screen.dart';
+
+final FlutterLocalNotificationsPlugin _localNotifications =
+    FlutterLocalNotificationsPlugin();
+
+const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+  'reelscholar_notifications',
+  'ReelScholar',
+  importance: Importance.high,
+);
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,7 +37,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // ── Tab screens ──────────────────────────────────────────────────────────────
   // Index 0 = Reels, 1 = Chats, 2 = Study Groups, 3 = Learn, 4 = Profile
   late final List<Widget> _screens;
 
@@ -38,6 +50,82 @@ class _MainScreenState extends State<MainScreen> {
       ModulesScreen(onMenuTap: _openDrawer),
       const MyProfileScreen(),
     ];
+    _initLocalNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initFcm());
+  }
+
+  Future<void> _initLocalNotifications() async {
+    const initSettings = InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    );
+    await _localNotifications.initialize(initSettings);
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
+  }
+
+  Future<void> _initFcm() async {
+    // Request permission (required on iOS, safe no-op on Android 12-)
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // Register current token
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null && mounted) {
+      context.read<AuthProvider>().updateFcmToken(token);
+    }
+
+    // Re-register when the token rotates
+    FirebaseMessaging.instance.onTokenRefresh.listen((t) {
+      if (mounted) context.read<AuthProvider>().updateFcmToken(t);
+    });
+
+    // Foreground message — show local banner and bump the badge
+    FirebaseMessaging.onMessage.listen((message) {
+      _showLocalNotification(message);
+      if (mounted) {
+        final notifProv = context.read<NotificationProvider>();
+        notifProv.incrementUnreadCount();
+        context
+            .read<NavigationProvider>()
+            .setUnreadNotifications(notifProv.unreadCount);
+      }
+    });
+
+    // App in background — user tapped the notification
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      if (mounted) NotificationRouter.route(message.data, context);
+    });
+
+    // App was terminated — user tapped the notification that launched the app
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null && mounted) {
+      NotificationRouter.route(initial.data, context);
+    }
+  }
+
+  void _showLocalNotification(RemoteMessage message) {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    _localNotifications.show(
+      message.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+    );
   }
 
   void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
@@ -53,17 +141,17 @@ class _MainScreenState extends State<MainScreen> {
       SystemUiOverlayStyle(
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: isDark ? const Color(0xFF020617) : Colors.white,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: isDark ? AppColors.darkNav : Colors.white,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
       ),
     );
 
     return Scaffold(
       key: _scaffoldKey,
-      extendBody: false, // fixed overlap
-      backgroundColor: isDark ? const Color(0xFF020617) : AppColors.white,
+      extendBody: false,
+      backgroundColor: isDark ? AppColors.darkNav : AppColors.white,
 
-      // ── Sidebar drawer ─────────────────────────────────────────────────
       drawer: AppDrawer(
         user: _buildDrawerUser(
           context.watch<AuthProvider>(),
@@ -72,10 +160,8 @@ class _MainScreenState extends State<MainScreen> {
         onSignOut: _confirmSignOut,
       ),
 
-      // ── Body: IndexedStack keeps each tab alive ──────────────────────
       body: IndexedStack(index: currentIndex, children: _screens),
 
-      // ── Bottom navigation bar ──────────────────────────────────────────
       bottomNavigationBar: AppBottomNavBar(isDark: isDark),
     );
   }
@@ -90,8 +176,6 @@ class _MainScreenState extends State<MainScreen> {
         currentStreak: 0,
       );
     }
-    // Prefer the fresh URL from ProfileProvider (re-fetched on each profile load)
-    // over the stale signed URL stored in AuthProvider at login time.
     final freshPicUrl = profile.profilePicUrl ?? u.profilePicUrl;
     return DrawerUser(
       fullName: u.fullName,
@@ -103,7 +187,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _confirmSignOut() async {
-    Navigator.pop(context); // close drawer first
+    Navigator.pop(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(

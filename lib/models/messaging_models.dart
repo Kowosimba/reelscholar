@@ -455,11 +455,38 @@ class MessageRequest {
       receiver: receiver,
       initialMessage: j['initial_message']?.toString() ?? '',
       status: j['status']?.toString() ?? 'pending',
-      conversationId: j['conversation_id'] as String?,
+      conversationId: j['conversation_id']?.toString(),
       createdAt:
           DateTime.tryParse(j['created_at']?.toString() ?? '') ?? DateTime.now(),
       respondedAt:
           DateTime.tryParse(j['responded_at']?.toString() ?? ''),
     );
   }
+}
+
+// ── Check-status result ───────────────────────────────────────────────────────
+
+class CheckStatusResult {
+  /// "conversation_exists" | "request_sent" | "request_received" | "no_connection"
+  final String status;
+  final String? conversationId;
+  final String? requestId;
+
+  const CheckStatusResult({
+    required this.status,
+    this.conversationId,
+    this.requestId,
+  });
+
+  bool get hasConversation  => status == 'conversation_exists';
+  bool get requestSent      => status == 'request_sent';
+  bool get requestReceived  => status == 'request_received';
+  bool get noConnection     => status == 'no_connection';
+
+  factory CheckStatusResult.fromJson(Map<String, dynamic> j) =>
+      CheckStatusResult(
+        status: j['status']?.toString() ?? 'no_connection',
+        conversationId: j['conversation_id']?.toString(),
+        requestId: j['request_id']?.toString(),
+      );
 }

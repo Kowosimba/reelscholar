@@ -182,7 +182,7 @@ class _HackCard extends StatelessWidget {
                   Row(
                     children: [
                       _StatusPill(status: hack.status),
-                      if (hack.isRegistered) ...[
+                      if (hack.hasTeam) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(

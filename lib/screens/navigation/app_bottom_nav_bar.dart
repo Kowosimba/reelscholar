@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:reelscholar/providers/app_colors.dart';
+import 'package:reelscholar/core/constants/app_colors.dart';
 import 'package:reelscholar/providers/navigation_provider.dart';
 
 /// Shadcn-inspired bottom nav: neutral surface, crisp border, soft active pill.
@@ -16,12 +16,12 @@ class AppBottomNavBar extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF020617) : Colors.white,
+            color: isDark ? AppColors.darkNav : Colors.white,
             border: Border(
               top: BorderSide(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.08)
-                    : const Color(0xFFE2E8F0),
+                    : AppColors.border,
               ),
             ),
             boxShadow: isDark
