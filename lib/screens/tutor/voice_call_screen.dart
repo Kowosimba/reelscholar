@@ -53,14 +53,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      context.read<VoiceCallProvider>().endCall();
-    }
-  }
-
-  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pulseCtrl.dispose();

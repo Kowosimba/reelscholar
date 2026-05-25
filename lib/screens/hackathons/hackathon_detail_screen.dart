@@ -1028,6 +1028,20 @@ class _MyTeamView extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
+          // Invite code (leader only)
+          if (hack.isLeader && (hack.myTeam?.inviteCode ?? '').isNotEmpty)
+            _InviteCodeRow(code: hack.myTeam!.inviteCode),
+
+          if (hack.isLeader && (hack.myTeam?.inviteCode ?? '').isNotEmpty)
+            const SizedBox(height: 14),
+
+          // Members list
+          if ((hack.myTeam?.members ?? []).isNotEmpty)
+            _MembersCard(members: hack.myTeam!.members),
+
+          if ((hack.myTeam?.members ?? []).isNotEmpty)
+            const SizedBox(height: 14),
+
           // Action buttons
           if (hack.status.canSubmit) ...[
             ElevatedButton.icon(
@@ -1072,36 +1086,38 @@ class _MyTeamView extends StatelessWidget {
             const SizedBox(height: 10),
           ],
 
-          // Leave
-          if (!hack.isLeader)
-            TextButton(
-              onPressed: () => _confirmLeave(context),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppColors.error),
-              child: const Text(
-                'Leave Team',
-                style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600),
-              ),
+          // Leave / disband
+          TextButton(
+            onPressed: () => _confirmLeave(context),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(
+              hack.isLeader ? 'Disband Team' : 'Leave Team',
+              style: const TextStyle(
+                  fontFamily: 'DM Sans', fontWeight: FontWeight.w600),
             ),
+          ),
         ],
       ),
     );
   }
 
   void _confirmLeave(BuildContext context) {
+    final isLeader = hack.isLeader;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        title: const Text('Leave team?',
-            style: TextStyle(
+        title: Text(isLeader ? 'Disband team?' : 'Leave team?',
+            style: const TextStyle(
                 fontFamily: 'Sora',
                 fontWeight: FontWeight.w800,
                 fontSize: 16)),
-        content: const Text(
-            'You will lose your team membership.',
-            style: TextStyle(
+        content: Text(
+            isLeader
+                ? 'This will permanently disband the team and remove all members.'
+                : 'You will lose your team membership.',
+            style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
                 color: AppColors.textSecondary)),
@@ -1116,9 +1132,190 @@ class _MyTeamView extends StatelessWidget {
                   .read<HackathonProvider>()
                   .leaveTeam(hack.id);
             },
-            child: const Text('Leave',
-                style: TextStyle(color: AppColors.error)),
+            child: Text(isLeader ? 'Disband' : 'Leave',
+                style: const TextStyle(color: AppColors.error)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Invite code row ───────────────────────────────────────────────────────────
+
+class _InviteCodeRow extends StatelessWidget {
+  final String code;
+  const _InviteCodeRow({required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.key_rounded, size: 18, color: AppColors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Invite Code',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 11,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                Text(
+                  code,
+                  style: const TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_rounded,
+                size: 18, color: AppColors.primary),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: code));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invite code copied!'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Members card ──────────────────────────────────────────────────────────────
+
+class _MembersCard extends StatelessWidget {
+  final List<HackTeamMember> members;
+  const _MembersCard({required this.members});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Text(
+              'Team Members',
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ...members.map((m) => _MemberTile(member: m)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberTile extends StatelessWidget {
+  final HackTeamMember member;
+  const _MemberTile({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = member.name.trim().split(' ').take(2)
+        .map((p) => p.isEmpty ? '' : p[0].toUpperCase()).join();
+    final isLeader = member.role == 'leader';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          // Avatar
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isLeader
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : AppColors.secondarySubtle,
+            ),
+            child: member.profilePic != null && member.profilePic!.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(member.profilePic!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Center(
+                              child: Text(initials,
+                                  style: const TextStyle(
+                                      fontFamily: 'Sora',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary)),
+                            )),
+                  )
+                : Center(
+                    child: Text(initials,
+                        style: const TextStyle(
+                            fontFamily: 'Sora',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary))),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              member.name,
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          if (isLeader)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                '👑 Leader',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
         ],
       ),
     );

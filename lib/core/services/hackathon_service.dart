@@ -147,6 +147,7 @@ class HackathonService {
     required String step,
     required int percentage,
     String? notes,
+    List<bool>? checklist,
   }) async {
     final headers = await _getHeaders();
     final res = await http.patch(
@@ -156,6 +157,7 @@ class HackathonService {
         'step': step,
         'percentage': percentage,
         'notes': ?notes,
+        'checklist': ?checklist,
       }),
     );
     _ok(res);

@@ -1,0 +1,371 @@
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/media
+========================================
+
+METHOD: POST
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+REQUEST BODY:
+{
+    "required":  true,
+    "content":  {
+                    "multipart/form-data":  {
+                                                "schema":  {
+                                                               "type":  "object",
+                                                               "properties":  {
+                                                                                  "body":  {
+                                                                                               "type":  [
+                                                                                                            "string",
+                                                                                                            "null"
+                                                                                                        ],
+                                                                                               "maxLength":  2000
+                                                                                           },
+                                                                                  "reply_to_id":  {
+                                                                                                      "type":  [
+                                                                                                                   "string",
+                                                                                                                   "null"
+                                                                                                               ],
+                                                                                                      "format":  "uuid"
+                                                                                                  },
+                                                                                  "attachments":  {
+                                                                                                      "type":  "array",
+                                                                                                      "items":  {
+                                                                                                                    "type":  "string",
+                                                                                                                    "format":  "binary",
+                                                                                                                    "contentMediaType":  "application/octet-stream",
+                                                                                                                    "maxLength":  10240
+                                                                                                                },
+                                                                                                      "minItems":  1,
+                                                                                                      "maxItems":  5
+                                                                                                  }
+                                                                              },
+                                                               "required":  [
+                                                                                "attachments"
+                                                                            ]
+                                                           }
+                                            }
+                }
+}
+RESPONSES (summary):
+{
+    "201":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "422":  {
+                "$ref":  "#/components/responses/ValidationException"
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/{message}
+========================================
+
+METHOD: DELETE
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "message",
+        "in":  "path",
+        "required":  true,
+        "description":  "The message ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+RESPONSES (summary):
+{
+    "200":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "403":  {
+                "description":  "An error",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/{message}/react
+========================================
+
+METHOD: POST
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "message",
+        "in":  "path",
+        "required":  true,
+        "description":  "The message ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+REQUEST BODY:
+{
+    "required":  true,
+    "content":  {
+                    "application/json":  {
+                                             "schema":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "emoji":  {
+                                                                                             "type":  "string",
+                                                                                             "maxLength":  2
+                                                                                         }
+                                                                           },
+                                                            "required":  [
+                                                                             "emoji"
+                                                                         ]
+                                                        }
+                                         }
+                }
+}
+RESPONSES (summary):
+{
+    "200":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "422":  {
+                "$ref":  "#/components/responses/ValidationException"
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/typing/start
+========================================
+
+METHOD: POST
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+RESPONSES (summary):
+{
+    "200":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/typing/stop
+========================================
+
+METHOD: POST
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+RESPONSES (summary):
+{
+    "200":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}
+========================================
+Path: /hackathons/{hackathon}/teams/{team}/chat/typing
+========================================
+
+METHOD: GET
+---------
+PARAMETERS:
+[
+    {
+        "name":  "hackathon",
+        "in":  "path",
+        "required":  true,
+        "description":  "The hackathon ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    },
+    {
+        "name":  "team",
+        "in":  "path",
+        "required":  true,
+        "description":  "The team ID",
+        "schema":  {
+                       "type":  "string",
+                       "format":  "uuid"
+                   }
+    }
+]
+RESPONSES (summary):
+{
+    "200":  {
+                "description":  "",
+                "content":  {
+                                "application/json":  {
+                                                         "schema":  "@{type=object; properties=; required=System.Object[]}"
+                                                     }
+                            }
+            },
+    "404":  {
+                "$ref":  "#/components/responses/ModelNotFoundException"
+            },
+    "401":  {
+                "$ref":  "#/components/responses/AuthenticationException"
+            }
+}

@@ -20,7 +20,8 @@ class VoiceCallSession {
     openingLine: j['opening_line']?.toString() ?? '',
     topicTitle: (j['progress'] as Map<String, dynamic>?)?['current_topic_title']?.toString() ??
         j['topic_title']?.toString() ?? '',
-    isResumed: j['is_resumed'] == true,
+    isResumed: j['is_resumed'] == true ||
+        j['is_resumed']?.toString() == 'true',
     progress: VoiceProgress.fromJson((j['progress'] as Map<String, dynamic>?) ?? {}),
     quota: VoiceQuota.fromJson((j['quota'] as Map<String, dynamic>?) ?? {}),
   );
@@ -38,9 +39,10 @@ class VoiceQuota {
   });
 
   factory VoiceQuota.fromJson(Map<String, dynamic> j) => VoiceQuota(
-    usedTurns: (j['used_turns'] as num?)?.toInt() ?? 0,
-    capTurns: (j['cap_turns'] as num?)?.toInt() ?? 0,
-    remainingTurns: (j['remaining_turns'] as num?)?.toInt() ?? 0,
+    usedTurns: int.tryParse(j['used_turns']?.toString() ?? '') ?? 0,
+    capTurns: int.tryParse(j['cap_turns']?.toString() ?? '') ?? 0,
+    remainingTurns:
+        int.tryParse(j['remaining_turns']?.toString() ?? '') ?? 0,
   );
 }
 
@@ -59,8 +61,9 @@ class VoiceTurnResult {
 
   factory VoiceTurnResult.fromJson(Map<String, dynamic> j) => VoiceTurnResult(
     replyText: j['reply_text']?.toString() ?? '',
-    turnCount: (j['turn_count'] as num?)?.toInt() ?? 0,
-    topicAdvanced: j['topic_advanced'] == true,
+    turnCount: int.tryParse(j['turn_count']?.toString() ?? '') ?? 0,
+    topicAdvanced: j['topic_advanced'] == true ||
+        j['topic_advanced']?.toString() == 'true',
     progress: VoiceProgress.fromJson(
       (j['progress'] as Map<String, dynamic>?) ?? {},
     ),
@@ -85,12 +88,17 @@ class VoiceProgress {
   });
 
   factory VoiceProgress.fromJson(Map<String, dynamic> j) => VoiceProgress(
-    currentTopicIndex: (j['current_topic_index'] as num?)?.toInt() ?? 0,
+    currentTopicIndex:
+        int.tryParse(j['current_topic_index']?.toString() ?? '') ?? 0,
     currentTopicTitle: j['current_topic_title']?.toString() ?? '',
-    topicsCompleted: (j['topics_completed'] as num?)?.toInt() ?? 0,
-    totalTopics: (j['total_topics'] as num?)?.toInt() ?? 0,
-    progressPercentage: (j['progress_percentage'] as num?)?.toDouble() ?? 0.0,
-    shouldSuggestQuiz: j['should_suggest_quiz'] == true,
+    topicsCompleted:
+        int.tryParse(j['topics_completed']?.toString() ?? '') ?? 0,
+    totalTopics:
+        int.tryParse(j['total_topics']?.toString() ?? '') ?? 0,
+    progressPercentage:
+        double.tryParse(j['progress_percentage']?.toString() ?? '') ?? 0.0,
+    shouldSuggestQuiz: j['should_suggest_quiz'] == true ||
+        j['should_suggest_quiz']?.toString() == 'true',
   );
 }
 

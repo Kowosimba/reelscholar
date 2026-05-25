@@ -119,6 +119,21 @@ class HackathonProvider extends ChangeNotifier {
     await loadHackathon(hackId);
   }
 
+  Future<void> updateProgress(
+    String hackId, {
+    required String step,
+    required int percentage,
+    String? notes,
+    List<bool>? checklist,
+  }) async {
+    await _service.updateProgress(hackId,
+        step: step,
+        percentage: percentage,
+        notes: notes,
+        checklist: checklist);
+    await loadHackathon(hackId);
+  }
+
   Future<void> loadOpenTeams(String hackId) async {
     _teamsLoading = true;
     notifyListeners();
